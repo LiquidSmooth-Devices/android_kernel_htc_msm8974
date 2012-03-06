@@ -926,9 +926,15 @@ static inline void switch_normal_mode(void)
 
 static void switch_mode_timer(unsigned long data)
 {
+
 	switch_normal_mode();
 }
 #endif
+
+	/* Extrapolated load of this CPU */
+	unsigned int load_at_max_freq = 0;
+	/* Current load across this CPU */
+	unsigned int cur_load = 0;
 
 static int adjust_freq_map_table(int freq, int cnt, struct cpufreq_policy *policy)
 {
@@ -1264,6 +1270,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 				dbs_tuners_ins.up_threshold_any_cpu_load;
 		}
 	}
+	/* calculate the scaled load across CPU */
+	load_at_max_freq = (cur_load * policy->cur)/policy->cpuinfo.max_freq;
+
+	cpufreq_notify_utilization(policy, load_at_max_freq);
 
 	if (dbs_tuners_ins.shortcut)
 		up_threshold = dbs_tuners_ins.up_threshold;
