@@ -617,6 +617,17 @@ static int c_can_get_berr_counter(const struct net_device *dev,
 	return 0;
 }
 
+/*
+ * theory of operation:
+ *
+ * priv->tx_echo holds the number of the oldest can_frame put for
+ * transmission into the hardware, but not yet ACKed by the CAN tx
+ * complete IRQ.
+ *
+ * We iterate from priv->tx_echo to priv->tx_next and check if the
+ * packet has been transmitted, echo it back to the CAN framework.
+ * If we discover a not yet transmitted packet, stop looking for more.
+ */
 static void c_can_do_tx(struct net_device *dev)
 {
 	u32 val;
@@ -627,7 +638,7 @@ static void c_can_do_tx(struct net_device *dev)
 	for (; (priv->tx_next - priv->tx_echo) > 0; priv->tx_echo++) {
 		msg_obj_no = get_tx_echo_msg_obj(priv);
 		val = c_can_read_reg32(priv, &priv->regs->txrqst1);
-		if (!(val & (1 << msg_obj_no))) {
+		if (!(val & (1 << (msg_obj_no - 1)))) {
 			can_get_echo_skb(dev,
 					msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
 			stats->tx_bytes += priv->read_reg(priv,
@@ -635,6 +646,8 @@ static void c_can_do_tx(struct net_device *dev)
 					& IF_MCONT_DLC_MASK;
 			stats->tx_packets++;
 			c_can_inval_msg_object(dev, 0, msg_obj_no);
+		} else {
+			break;
 		}
 	}
 
@@ -840,7 +853,7 @@ static int c_can_poll(struct napi_struct *napi, int quota)
 	struct net_device *dev = napi->dev;
 	struct c_can_priv *priv = netdev_priv(dev);
 
-	irqstatus = priv->read_reg(priv, &priv->regs->interrupt);
+	irqstatus = priv->irqstatus;
 	if (!irqstatus)
 		goto end;
 
@@ -918,12 +931,11 @@ end:
 
 static irqreturn_t c_can_isr(int irq, void *dev_id)
 {
-	u16 irqstatus;
 	struct net_device *dev = (struct net_device *)dev_id;
 	struct c_can_priv *priv = netdev_priv(dev);
 
-	irqstatus = priv->read_reg(priv, &priv->regs->interrupt);
-	if (!irqstatus)
+	priv->irqstatus = priv->read_reg(priv, &priv->regs->interrupt);
+	if (!priv->irqstatus)
 		return IRQ_NONE;
 
 	
@@ -953,10 +965,11 @@ static int c_can_open(struct net_device *dev)
 		goto exit_irq_fail;
 	}
 
-	
+	napi_enable(&priv->napi);
+
+	/* start the c_can controller */
 	c_can_start(dev);
 
-	napi_enable(&priv->napi);
 	netif_start_queue(dev);
 
 	return 0;

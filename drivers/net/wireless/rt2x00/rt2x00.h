@@ -227,8 +227,12 @@ struct rt2x00_intf {
 
 	unsigned long delayed_flags;
 
-	spinlock_t seqlock;
-	u16 seqno;
+	/*
+	 * Software sequence counter, this is only required
+	 * for hardware which doesn't support hardware
+	 * sequence counting.
+	 */
+	atomic_t seqno;
 };
 
 static inline struct rt2x00_intf* vif_to_intf(struct ieee80211_vif *vif)

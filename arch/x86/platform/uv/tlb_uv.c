@@ -1001,7 +1001,6 @@ static void __init enable_timeouts(void)
 		write_mmr_misc_control(pnode, mmr_image);
 		mmr_image |= (1L << SOFTACK_MSHIFT);
 		if (is_uv2_hub()) {
-			mmr_image &= ~(1L << UV2_LEG_SHFT);
 			mmr_image |= (1L << UV2_EXT_SHFT);
 		}
 		write_mmr_misc_control(pnode, mmr_image);

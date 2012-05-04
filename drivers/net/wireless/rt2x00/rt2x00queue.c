@@ -168,6 +168,7 @@ static void rt2x00queue_create_tx_descriptor_seq(struct rt2x00_dev *rt2x00dev,
 	struct ieee80211_tx_info *tx_info = IEEE80211_SKB_CB(skb);
 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
 	struct rt2x00_intf *intf = vif_to_intf(tx_info->control.vif);
+	u16 seqno;
 
 	if (!(tx_info->flags & IEEE80211_TX_CTL_ASSIGN_SEQ))
 		return;
@@ -177,15 +178,24 @@ static void rt2x00queue_create_tx_descriptor_seq(struct rt2x00_dev *rt2x00dev,
 	if (!test_bit(REQUIRE_SW_SEQNO, &rt2x00dev->cap_flags))
 		return;
 
-	spin_lock(&intf->seqlock);
-
+	/*
+	 * The hardware is not able to insert a sequence number. Assign a
+	 * software generated one here.
+	 *
+	 * This is wrong because beacons are not getting sequence
+	 * numbers assigned properly.
+	 *
+	 * A secondary problem exists for drivers that cannot toggle
+	 * sequence counting per-frame, since those will override the
+	 * sequence counter given by mac80211.
+	 */
 	if (test_bit(ENTRY_TXD_FIRST_FRAGMENT, &txdesc->flags))
-		intf->seqno += 0x10;
+		seqno = atomic_add_return(0x10, &intf->seqno);
+	else
+		seqno = atomic_read(&intf->seqno);
+
 	hdr->seq_ctrl &= cpu_to_le16(IEEE80211_SCTL_FRAG);
-	hdr->seq_ctrl |= cpu_to_le16(intf->seqno);
-
-	spin_unlock(&intf->seqlock);
-
+	hdr->seq_ctrl |= cpu_to_le16(seqno);
 }
 
 static void rt2x00queue_create_tx_descriptor_plcp(struct rt2x00_dev *rt2x00dev,

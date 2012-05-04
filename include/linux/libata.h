@@ -184,61 +184,64 @@ enum {
 	ATA_FLAG_NO_POWEROFF_SPINDOWN = (1 << 11), 
 	ATA_FLAG_NO_HIBERNATE_SPINDOWN = (1 << 12), 
 	ATA_FLAG_DEBUGMSG	= (1 << 13),
-	ATA_FLAG_FPDMA_AA		= (1 << 14), 
-	ATA_FLAG_IGN_SIMPLEX	= (1 << 15), 
-	ATA_FLAG_NO_IORDY	= (1 << 16), 
-	ATA_FLAG_ACPI_SATA	= (1 << 17), 
-	ATA_FLAG_AN		= (1 << 18), 
-	ATA_FLAG_PMP		= (1 << 19), 
-	ATA_FLAG_EM		= (1 << 21), 
-	ATA_FLAG_SW_ACTIVITY	= (1 << 22), 
-	ATA_FLAG_NO_DIPM	= (1 << 23), 
+	ATA_FLAG_FPDMA_AA		= (1 << 14), /* driver supports Auto-Activate */
+	ATA_FLAG_IGN_SIMPLEX	= (1 << 15), /* ignore SIMPLEX */
+	ATA_FLAG_NO_IORDY	= (1 << 16), /* controller lacks iordy */
+	ATA_FLAG_ACPI_SATA	= (1 << 17), /* need native SATA ACPI layout */
+	ATA_FLAG_AN		= (1 << 18), /* controller supports AN */
+	ATA_FLAG_PMP		= (1 << 19), /* controller supports PMP */
+	ATA_FLAG_EM		= (1 << 21), /* driver supports enclosure
+					      * management */
+	ATA_FLAG_SW_ACTIVITY	= (1 << 22), /* driver supports sw activity
+					      * led */
+	ATA_FLAG_NO_DIPM	= (1 << 23), /* host not happy with DIPM */
 
-	
+	/* bits 24:31 of ap->flags are reserved for LLD specific flags */
 
 
-	
-	ATA_PFLAG_EH_PENDING	= (1 << 0), 
-	ATA_PFLAG_EH_IN_PROGRESS = (1 << 1), 
-	ATA_PFLAG_FROZEN	= (1 << 2), 
-	ATA_PFLAG_RECOVERED	= (1 << 3), 
-	ATA_PFLAG_LOADING	= (1 << 4), 
-	ATA_PFLAG_SCSI_HOTPLUG	= (1 << 6), 
-	ATA_PFLAG_INITIALIZING	= (1 << 7), 
-	ATA_PFLAG_RESETTING	= (1 << 8), 
-	ATA_PFLAG_UNLOADING	= (1 << 9), 
-	ATA_PFLAG_UNLOADED	= (1 << 10), 
+	/* struct ata_port pflags */
+	ATA_PFLAG_EH_PENDING	= (1 << 0), /* EH pending */
+	ATA_PFLAG_EH_IN_PROGRESS = (1 << 1), /* EH in progress */
+	ATA_PFLAG_FROZEN	= (1 << 2), /* port is frozen */
+	ATA_PFLAG_RECOVERED	= (1 << 3), /* recovery action performed */
+	ATA_PFLAG_LOADING	= (1 << 4), /* boot/loading probe */
+	ATA_PFLAG_SCSI_HOTPLUG	= (1 << 6), /* SCSI hotplug scheduled */
+	ATA_PFLAG_INITIALIZING	= (1 << 7), /* being initialized, don't touch */
+	ATA_PFLAG_RESETTING	= (1 << 8), /* reset in progress */
+	ATA_PFLAG_UNLOADING	= (1 << 9), /* driver is being unloaded */
+	ATA_PFLAG_UNLOADED	= (1 << 10), /* driver is unloaded */
 
-	ATA_PFLAG_SUSPENDED	= (1 << 17), 
-	ATA_PFLAG_PM_PENDING	= (1 << 18), 
-	ATA_PFLAG_INIT_GTM_VALID = (1 << 19), 
+	ATA_PFLAG_SUSPENDED	= (1 << 17), /* port is suspended (power) */
+	ATA_PFLAG_PM_PENDING	= (1 << 18), /* PM operation pending */
+	ATA_PFLAG_INIT_GTM_VALID = (1 << 19), /* initial gtm data valid */
 
-	ATA_PFLAG_PIO32		= (1 << 20),  
-	ATA_PFLAG_PIO32CHANGE	= (1 << 21),  
+	ATA_PFLAG_PIO32		= (1 << 20),  /* 32bit PIO */
+	ATA_PFLAG_PIO32CHANGE	= (1 << 21),  /* 32bit PIO can be turned on/off */
 
-	
-	ATA_QCFLAG_ACTIVE	= (1 << 0), 
-	ATA_QCFLAG_DMAMAP	= (1 << 1), 
-	ATA_QCFLAG_IO		= (1 << 3), 
-	ATA_QCFLAG_RESULT_TF	= (1 << 4), 
-	ATA_QCFLAG_CLEAR_EXCL	= (1 << 5), 
-	ATA_QCFLAG_QUIET	= (1 << 6), 
-	ATA_QCFLAG_RETRY	= (1 << 7), 
+	/* struct ata_queued_cmd flags */
+	ATA_QCFLAG_ACTIVE	= (1 << 0), /* cmd not yet ack'd to scsi lyer */
+	ATA_QCFLAG_DMAMAP	= (1 << 1), /* SG table is DMA mapped */
+	ATA_QCFLAG_IO		= (1 << 3), /* standard IO command */
+	ATA_QCFLAG_RESULT_TF	= (1 << 4), /* result TF requested */
+	ATA_QCFLAG_CLEAR_EXCL	= (1 << 5), /* clear excl_link on completion */
+	ATA_QCFLAG_QUIET	= (1 << 6), /* don't report device error */
+	ATA_QCFLAG_RETRY	= (1 << 7), /* retry after failure */
 
-	ATA_QCFLAG_FAILED	= (1 << 16), 
-	ATA_QCFLAG_SENSE_VALID	= (1 << 17), 
-	ATA_QCFLAG_EH_SCHEDULED = (1 << 18), 
+	ATA_QCFLAG_FAILED	= (1 << 16), /* cmd failed and is owned by EH */
+	ATA_QCFLAG_SENSE_VALID	= (1 << 17), /* sense data valid */
+	ATA_QCFLAG_EH_SCHEDULED = (1 << 18), /* EH scheduled (obsolete) */
 
-	
-	ATA_HOST_SIMPLEX	= (1 << 0),	
-	ATA_HOST_STARTED	= (1 << 1),	
-	ATA_HOST_PARALLEL_SCAN	= (1 << 2),	
+	/* host set flags */
+	ATA_HOST_SIMPLEX	= (1 << 0),	/* Host is simplex, one DMA channel per host only */
+	ATA_HOST_STARTED	= (1 << 1),	/* Host started */
+	ATA_HOST_PARALLEL_SCAN	= (1 << 2),	/* Ports on this host can be scanned in parallel */
+	ATA_HOST_IGNORE_ATA	= (1 << 3),	/* Ignore ATA devices on this host. */
 
-	
+	/* bits 24:31 of host->flags are reserved for LLD specific flags */
 
-	
-	ATA_TMOUT_BOOT		= 30000,	
-	ATA_TMOUT_BOOT_QUICK	=  7000,	
+	/* various lengths of time */
+	ATA_TMOUT_BOOT		= 30000,	/* heuristic */
+	ATA_TMOUT_BOOT_QUICK	=  7000,	/* heuristic */
 	ATA_TMOUT_INTERNAL_QUICK = 5000,
 	ATA_TMOUT_MAX_PARK	= 30000,
 

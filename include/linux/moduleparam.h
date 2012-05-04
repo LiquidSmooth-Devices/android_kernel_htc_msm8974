@@ -76,7 +76,7 @@ struct kparam_array
 	__MODULE_PARM_TYPE(name, #type)
 
 #define module_param_cb(name, ops, arg, perm)				      \
-	__module_param_call(MODULE_PARAM_PREFIX, name, ops, arg, perm, 0)
+	__module_param_call(MODULE_PARAM_PREFIX, name, ops, arg, perm, -1)
 
 #define __level_param_cb(name, ops, arg, perm, level)			\
 	__module_param_call(MODULE_PARAM_PREFIX, name, ops, arg, perm, level)
@@ -124,7 +124,7 @@ struct kparam_array
 		 { (void *)set, (void *)get };				\
 	__module_param_call(MODULE_PARAM_PREFIX,			\
 			    name, &__param_ops_##name, arg,		\
-			    (perm) + sizeof(__check_old_set_param(set))*0, 0)
+			    (perm) + sizeof(__check_old_set_param(set))*0, -1)
 
 static inline int
 __check_old_set_param(int (*oldset)(const char *, struct kernel_param *))
@@ -177,15 +177,15 @@ static inline void __kernel_param_unlock(void)
 #ifndef MODULE
 #define core_param(name, var, type, perm)				\
 	param_check_##type(name, &(var));				\
-	__module_param_call("", name, &param_ops_##type, &var, perm, 0)
-#endif 
+	__module_param_call("", name, &param_ops_##type, &var, perm, -1)
+#endif /* !MODULE */
 
 #define module_param_string(name, string, len, perm)			\
 	static const struct kparam_string __param_string_##name		\
 		= { len, string };					\
 	__module_param_call(MODULE_PARAM_PREFIX, name,			\
 			    &param_ops_string,				\
-			    .str = &__param_string_##name, perm, 0);	\
+			    .str = &__param_string_##name, perm, -1);	\
 	__MODULE_PARM_TYPE(name, "string")
 
 extern bool parameq(const char *name1, const char *name2);
@@ -303,7 +303,7 @@ extern int param_set_bint(const char *val, const struct kernel_param *kp);
 	__module_param_call(MODULE_PARAM_PREFIX, name,			\
 			    &param_array_ops,				\
 			    .arr = &__param_arr_##name,			\
-			    perm, 0);					\
+			    perm, -1);					\
 	__MODULE_PARM_TYPE(name, "array of " #type)
 
 extern struct kernel_param_ops param_array_ops;
