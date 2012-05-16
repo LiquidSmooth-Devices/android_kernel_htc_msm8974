@@ -526,6 +526,15 @@ void **radix_tree_next_chunk(struct radix_tree_root *root,
 	if ((flags & RADIX_TREE_ITER_TAGGED) && !root_tag_get(root, tag))
 		return NULL;
 
+	/*
+	 * Catch next_index overflow after ~0UL. iter->index never overflows
+	 * during iterating; it can be zero only at the beginning.
+	 * And we cannot overflow iter->next_index in a single step,
+	 * because RADIX_TREE_MAP_SHIFT < BITS_PER_LONG.
+	 *
+	 * This condition also used by radix_tree_next_slot() to stop
+	 * contiguous iterating, and forbid swithing to the next chunk.
+	 */
 	index = iter->next_index;
 	if (!index && iter->index)
 		return NULL;

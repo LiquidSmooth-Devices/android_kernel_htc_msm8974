@@ -397,7 +397,10 @@ struct amd_iommu {
 	
 	struct pci_dev *dev;
 
-	
+	/* Cache pdev to root device for resume quirks */
+	struct pci_dev *root_pdev;
+
+	/* physical address of MMIO space */
 	u64 mmio_phys;
 	
 	u8 *mmio_base;
