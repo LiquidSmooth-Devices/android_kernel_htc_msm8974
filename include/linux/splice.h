@@ -37,11 +37,12 @@ struct partial_page {
 };
 
 struct splice_pipe_desc {
-	struct page **pages;		
-	struct partial_page *partial;	
-	int nr_pages;			
-	unsigned int flags;		
-	const struct pipe_buf_operations *ops;
+	struct page **pages;		/* page map */
+	struct partial_page *partial;	/* pages[] may not be contig */
+	int nr_pages;			/* number of populated pages in map */
+	unsigned int nr_pages_max;	/* pages[] & partial[] arrays size */
+	unsigned int flags;		/* splice flags */
+	const struct pipe_buf_operations *ops;/* ops associated with output pipe */
 	void (*spd_release)(struct splice_pipe_desc *, unsigned int);
 };
 
@@ -70,9 +71,17 @@ extern ssize_t splice_to_pipe(struct pipe_inode_info *,
 extern ssize_t splice_direct_to_actor(struct file *, struct splice_desc *,
 				      splice_direct_actor *);
 
+<<<<<<< HEAD
 extern int splice_grow_spd(struct pipe_inode_info *, struct splice_pipe_desc *);
 extern void splice_shrink_spd(struct pipe_inode_info *,
 				struct splice_pipe_desc *);
+=======
+/*
+ * for dynamic pipe sizing
+ */
+extern int splice_grow_spd(const struct pipe_inode_info *, struct splice_pipe_desc *);
+extern void splice_shrink_spd(struct splice_pipe_desc *);
+>>>>>>> 2c07f25... splice: fix racy pipe->buffers uses
 extern void spd_release_page(struct splice_pipe_desc *, unsigned int);
 
 extern const struct pipe_buf_operations page_cache_pipe_buf_ops;

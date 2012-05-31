@@ -141,14 +141,11 @@ enum {
 	
 	SKBTX_IN_PROGRESS = 1 << 2,
 
-	
-	SKBTX_DRV_NEEDS_SK_REF = 1 << 3,
+	/* device driver supports TX zero-copy buffers */
+	SKBTX_DEV_ZEROCOPY = 1 << 3,
 
-	
-	SKBTX_DEV_ZEROCOPY = 1 << 4,
-
-	
-	SKBTX_WIFI_STATUS = 1 << 5,
+	/* generate wifi status information (where possible) */
+	SKBTX_WIFI_STATUS = 1 << 4,
 };
 
 struct ubuf_info {

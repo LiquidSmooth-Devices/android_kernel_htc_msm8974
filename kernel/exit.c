@@ -513,6 +513,14 @@ static void exit_mm(struct task_struct * tsk)
 	mm_release(tsk, mm);
 	if (!mm)
 		return;
+	sync_mm_rss(mm);
+	/*
+	 * Serialize with any possible pending coredump.
+	 * We must hold mmap_sem around checking core_state
+	 * and clearing tsk->mm.  The core-inducing thread
+	 * will increment ->nr_threads for each thread in the
+	 * group with ->mm != NULL.
+	 */
 	down_read(&mm->mmap_sem);
 	core_state = mm->core_state;
 	if (core_state) {

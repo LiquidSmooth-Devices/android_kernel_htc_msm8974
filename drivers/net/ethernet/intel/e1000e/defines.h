@@ -83,19 +83,21 @@
 #define E1000_CTRL_EXT_LSECCK         0x00001000
 #define E1000_CTRL_EXT_PHYPDEN        0x00100000
 
-#define E1000_RXD_STAT_DD       0x01    
-#define E1000_RXD_STAT_EOP      0x02    
-#define E1000_RXD_STAT_IXSM     0x04    
-#define E1000_RXD_STAT_VP       0x08    
-#define E1000_RXD_STAT_UDPCS    0x10    
-#define E1000_RXD_STAT_TCPCS    0x20    
-#define E1000_RXD_ERR_CE        0x01    
-#define E1000_RXD_ERR_SE        0x02    
-#define E1000_RXD_ERR_SEQ       0x04    
-#define E1000_RXD_ERR_CXE       0x10    
-#define E1000_RXD_ERR_TCPE      0x20    
-#define E1000_RXD_ERR_RXE       0x80    
-#define E1000_RXD_SPC_VLAN_MASK 0x0FFF  
+/* Receive Descriptor bit definitions */
+#define E1000_RXD_STAT_DD       0x01    /* Descriptor Done */
+#define E1000_RXD_STAT_EOP      0x02    /* End of Packet */
+#define E1000_RXD_STAT_IXSM     0x04    /* Ignore checksum */
+#define E1000_RXD_STAT_VP       0x08    /* IEEE VLAN Packet */
+#define E1000_RXD_STAT_UDPCS    0x10    /* UDP xsum calculated */
+#define E1000_RXD_STAT_TCPCS    0x20    /* TCP xsum calculated */
+#define E1000_RXD_ERR_CE        0x01    /* CRC Error */
+#define E1000_RXD_ERR_SE        0x02    /* Symbol Error */
+#define E1000_RXD_ERR_SEQ       0x04    /* Sequence Error */
+#define E1000_RXD_ERR_CXE       0x10    /* Carrier Extension Error */
+#define E1000_RXD_ERR_TCPE      0x20    /* TCP/UDP Checksum Error */
+#define E1000_RXD_ERR_IPE       0x40    /* IP Checksum Error */
+#define E1000_RXD_ERR_RXE       0x80    /* Rx Data Error */
+#define E1000_RXD_SPC_VLAN_MASK 0x0FFF  /* VLAN ID is in lower 12 bits */
 
 #define E1000_RXDEXT_STATERR_CE    0x01000000
 #define E1000_RXDEXT_STATERR_SE    0x02000000

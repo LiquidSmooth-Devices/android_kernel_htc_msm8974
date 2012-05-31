@@ -76,13 +76,10 @@ acpi_status acpi_hw_legacy_sleep(u8 sleep_state, u8 flags)
 		return_ACPI_STATUS(status);
 	}
 
-	if (sleep_state != ACPI_STATE_S5) {
-		status = acpi_write_bit_register(ACPI_BITREG_ARB_DISABLE, 1);
-		if (ACPI_FAILURE(status) && (status != AE_BAD_ADDRESS)) {
-			return_ACPI_STATUS(status);
-		}
-	}
-
+	/*
+	 * 1) Disable/Clear all GPEs
+	 * 2) Enable all wakeup GPEs
+	 */
 	status = acpi_hw_disable_all_gpes();
 	if (ACPI_FAILURE(status)) {
 		return_ACPI_STATUS(status);
@@ -271,11 +268,6 @@ acpi_status acpi_hw_legacy_wake(u8 sleep_state, u8 flags)
 	    acpi_write_bit_register(acpi_gbl_fixed_event_info
 				    [ACPI_EVENT_POWER_BUTTON].
 				    status_register_id, ACPI_CLEAR_STATUS);
-
-	status = acpi_write_bit_register(ACPI_BITREG_ARB_DISABLE, 0);
-	if (ACPI_FAILURE(status) && (status != AE_BAD_ADDRESS)) {
-		return_ACPI_STATUS(status);
-	}
 
 	acpi_hw_execute_sleep_method(METHOD_PATHNAME__SST, ACPI_SST_WORKING);
 	return_ACPI_STATUS(status);

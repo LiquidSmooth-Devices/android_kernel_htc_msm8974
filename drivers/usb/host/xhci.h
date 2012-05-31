@@ -174,6 +174,12 @@ struct xhci_op_regs {
 #define PORT_RC		(1 << 21)
 #define PORT_PLC	(1 << 22)
 #define PORT_CEC	(1 << 23)
+/* Cold Attach Status - xHC can set this bit to report device attached during
+ * Sx state. Warm port reset should be perfomed to clear this bit and move port
+ * to connected state.
+ */
+#define PORT_CAS	(1 << 24)
+/* wake on connect (enable) */
 #define PORT_WKCONN_E	(1 << 25)
 #define PORT_WKDISC_E	(1 << 26)
 #define PORT_WKOC_E	(1 << 27)

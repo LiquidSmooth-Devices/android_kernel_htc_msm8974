@@ -408,7 +408,7 @@ static void e1000_receive_skb(struct e1000_adapter *adapter,
 }
 
 static void e1000_rx_checksum(struct e1000_adapter *adapter, u32 status_err,
-			      __le16 csum, struct sk_buff *skb)
+			      struct sk_buff *skb)
 {
 	u16 status = (u16)status_err;
 	u8 errors = (u8)(status_err >> 24);
@@ -423,9 +423,9 @@ static void e1000_rx_checksum(struct e1000_adapter *adapter, u32 status_err,
 	if (status & E1000_RXD_STAT_IXSM)
 		return;
 
-	
-	if (errors & E1000_RXD_ERR_TCPE) {
-		
+	/* TCP/UDP checksum error bit or IP checksum error bit is set */
+	if (errors & (E1000_RXD_ERR_TCPE | E1000_RXD_ERR_IPE)) {
+		/* let the stack verify checksum errors */
 		adapter->hw_csum_err++;
 		return;
 	}
@@ -434,15 +434,8 @@ static void e1000_rx_checksum(struct e1000_adapter *adapter, u32 status_err,
 	if (!(status & (E1000_RXD_STAT_TCPCS | E1000_RXD_STAT_UDPCS)))
 		return;
 
-	
-	if (status & E1000_RXD_STAT_TCPCS) {
-		
-		skb->ip_summed = CHECKSUM_UNNECESSARY;
-	} else {
-		__sum16 sum = (__force __sum16)swab16((__force u16)csum);
-		skb->csum = csum_unfold(~sum);
-		skb->ip_summed = CHECKSUM_COMPLETE;
-	}
+	/* It must be a TCP or UDP packet with a valid checksum */
+	skb->ip_summed = CHECKSUM_UNNECESSARY;
 	adapter->hw_csum_good++;
 }
 
@@ -814,9 +807,8 @@ static bool e1000_clean_rx_irq(struct e1000_ring *rx_ring, int *work_done,
 		
 		skb_put(skb, length);
 
-		
-		e1000_rx_checksum(adapter, staterr,
-				  rx_desc->wb.lower.hi_dword.csum_ip.csum, skb);
+		/* Receive Checksum Offload */
+		e1000_rx_checksum(adapter, staterr, skb);
 
 		e1000_rx_hash(netdev, rx_desc->wb.lower.hi_dword.rss, skb);
 
@@ -1151,8 +1143,7 @@ copydone:
 		total_rx_bytes += skb->len;
 		total_rx_packets++;
 
-		e1000_rx_checksum(adapter, staterr,
-				  rx_desc->wb.lower.hi_dword.csum_ip.csum, skb);
+		e1000_rx_checksum(adapter, staterr, skb);
 
 		e1000_rx_hash(netdev, rx_desc->wb.lower.hi_dword.rss, skb);
 
@@ -1306,9 +1297,8 @@ static bool e1000_clean_jumbo_rx_irq(struct e1000_ring *rx_ring, int *work_done,
 			}
 		}
 
-		
-		e1000_rx_checksum(adapter, staterr,
-				  rx_desc->wb.lower.hi_dword.csum_ip.csum, skb);
+		/* Receive Checksum Offload */
+		e1000_rx_checksum(adapter, staterr, skb);
 
 		e1000_rx_hash(netdev, rx_desc->wb.lower.hi_dword.rss, skb);
 
@@ -2637,15 +2627,10 @@ static void e1000_configure_rx(struct e1000_adapter *adapter)
 
 	
 	rxcsum = er32(RXCSUM);
-	if (adapter->netdev->features & NETIF_F_RXCSUM) {
+	if (adapter->netdev->features & NETIF_F_RXCSUM)
 		rxcsum |= E1000_RXCSUM_TUOFL;
-
-		if (adapter->rx_ps_pages)
-			rxcsum |= E1000_RXCSUM_IPPCSE;
-	} else {
+	else
 		rxcsum &= ~E1000_RXCSUM_TUOFL;
-		
-	}
 	ew32(RXCSUM, rxcsum);
 
 	if (adapter->hw.mac.type == e1000_pch2lan) {
@@ -4414,18 +4399,11 @@ static int e1000_change_mtu(struct net_device *netdev, int new_mtu)
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	int max_frame = new_mtu + ETH_HLEN + ETH_FCS_LEN;
 
-	
-	if (max_frame > ETH_FRAME_LEN + ETH_FCS_LEN) {
-		if (!(adapter->flags & FLAG_HAS_JUMBO_FRAMES)) {
-			e_err("Jumbo Frames not supported.\n");
-			return -EINVAL;
-		}
-
-		if ((netdev->features & NETIF_F_RXCSUM) &&
-		    (netdev->features & NETIF_F_RXHASH)) {
-			e_err("Jumbo frames cannot be enabled when both receive checksum offload and receive hashing are enabled.  Disable one of the receive offload features before enabling jumbos.\n");
-			return -EINVAL;
-		}
+	/* Jumbo frame support */
+	if ((max_frame > ETH_FRAME_LEN + ETH_FCS_LEN) &&
+	    !(adapter->flags & FLAG_HAS_JUMBO_FRAMES)) {
+		e_err("Jumbo Frames not supported.\n");
+		return -EINVAL;
 	}
 
 	
@@ -5138,12 +5116,6 @@ static int e1000_set_features(struct net_device *netdev,
 			 NETIF_F_RXALL)))
 		return 0;
 
-	if (adapter->rx_ps_pages &&
-	    (features & NETIF_F_RXCSUM) && (features & NETIF_F_RXHASH)) {
-		e_err("Enabling both receive checksum offload and receive hashing is not possible with jumbo frames.  Disable jumbos or enable only one of the receive offload features.\n");
-		return -EINVAL;
-	}
-
 	if (changed & NETIF_F_RXFCS) {
 		if (features & NETIF_F_RXFCS) {
 			adapter->flags2 &= ~FLAG2_CRC_STRIPPING;
@@ -5326,7 +5298,7 @@ static int __devinit e1000_probe(struct pci_dev *pdev,
 		adapter->hw.phy.ms_type = e1000_ms_hw_default;
 	}
 
-	if (hw->phy.ops.check_reset_block(hw))
+	if (hw->phy.ops.check_reset_block && hw->phy.ops.check_reset_block(hw))
 		e_info("PHY reset is blocked due to SOL/IDER session.\n");
 
 	
@@ -5471,7 +5443,7 @@ err_register:
 	if (!(adapter->flags & FLAG_HAS_AMT))
 		e1000e_release_hw_control(adapter);
 err_eeprom:
-	if (!hw->phy.ops.check_reset_block(hw))
+	if (hw->phy.ops.check_reset_block && !hw->phy.ops.check_reset_block(hw))
 		e1000_phy_hw_reset(&adapter->hw);
 err_hw_init:
 	kfree(adapter->tx_ring);

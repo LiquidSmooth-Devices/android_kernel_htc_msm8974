@@ -465,7 +465,11 @@ s32 e1000e_setup_link_generic(struct e1000_hw *hw)
 {
 	s32 ret_val;
 
-	if (hw->phy.ops.check_reset_block(hw))
+	/*
+	 * In the case of the phy reset being blocked, we already have a link.
+	 * We do not need to set it up again.
+	 */
+	if (hw->phy.ops.check_reset_block && hw->phy.ops.check_reset_block(hw))
 		return 0;
 
 	if (hw->fc.requested_mode == e1000_fc_default) {
