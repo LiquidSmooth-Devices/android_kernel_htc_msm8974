@@ -49,99 +49,100 @@ static void cp210x_dtr_rts(struct usb_serial_port *p, int on);
 static bool debug;
 
 static const struct usb_device_id id_table[] = {
-	{ USB_DEVICE(0x045B, 0x0053) }, 
-	{ USB_DEVICE(0x0471, 0x066A) }, 
-	{ USB_DEVICE(0x0489, 0xE000) }, 
-	{ USB_DEVICE(0x0489, 0xE003) }, 
-	{ USB_DEVICE(0x0745, 0x1000) }, 
-	{ USB_DEVICE(0x08e6, 0x5501) }, 
-	{ USB_DEVICE(0x08FD, 0x000A) }, 
-	{ USB_DEVICE(0x0BED, 0x1100) }, 
-	{ USB_DEVICE(0x0BED, 0x1101) }, 
-	{ USB_DEVICE(0x0FCF, 0x1003) }, 
-	{ USB_DEVICE(0x0FCF, 0x1004) }, 
-	{ USB_DEVICE(0x0FCF, 0x1006) }, 
-	{ USB_DEVICE(0x10A6, 0xAA26) }, 
-	{ USB_DEVICE(0x10AB, 0x10C5) }, 
-	{ USB_DEVICE(0x10B5, 0xAC70) }, 
-	{ USB_DEVICE(0x10C4, 0x0F91) }, 
-	{ USB_DEVICE(0x10C4, 0x1101) }, 
-	{ USB_DEVICE(0x10C4, 0x1601) }, 
-	{ USB_DEVICE(0x10C4, 0x800A) }, 
-	{ USB_DEVICE(0x10C4, 0x803B) }, 
-	{ USB_DEVICE(0x10C4, 0x8044) }, 
-	{ USB_DEVICE(0x10C4, 0x804E) }, 
-	{ USB_DEVICE(0x10C4, 0x8053) }, 
-	{ USB_DEVICE(0x10C4, 0x8054) }, 
-	{ USB_DEVICE(0x10C4, 0x8066) }, 
-	{ USB_DEVICE(0x10C4, 0x806F) }, 
-	{ USB_DEVICE(0x10C4, 0x807A) }, 
-	{ USB_DEVICE(0x10C4, 0x80CA) }, 
-	{ USB_DEVICE(0x10C4, 0x80DD) }, 
-	{ USB_DEVICE(0x10C4, 0x80F6) }, 
-	{ USB_DEVICE(0x10C4, 0x8115) }, 
-	{ USB_DEVICE(0x10C4, 0x813D) }, 
-	{ USB_DEVICE(0x10C4, 0x813F) }, 
-	{ USB_DEVICE(0x10C4, 0x814A) }, 
-	{ USB_DEVICE(0x10C4, 0x814B) }, 
-	{ USB_DEVICE(0x10C4, 0x8156) }, 
-	{ USB_DEVICE(0x10C4, 0x815E) }, 
-	{ USB_DEVICE(0x10C4, 0x818B) }, 
-	{ USB_DEVICE(0x10C4, 0x819F) }, 
-	{ USB_DEVICE(0x10C4, 0x81A6) }, 
-	{ USB_DEVICE(0x10C4, 0x81A9) }, 
-	{ USB_DEVICE(0x10C4, 0x81AC) }, 
-	{ USB_DEVICE(0x10C4, 0x81AD) }, 
-	{ USB_DEVICE(0x10C4, 0x81C8) }, 
-	{ USB_DEVICE(0x10C4, 0x81E2) }, 
-	{ USB_DEVICE(0x10C4, 0x81E7) }, 
-	{ USB_DEVICE(0x10C4, 0x81E8) }, 
-	{ USB_DEVICE(0x10C4, 0x81F2) }, 
-	{ USB_DEVICE(0x10C4, 0x8218) }, 
-	{ USB_DEVICE(0x10C4, 0x822B) }, 
-	{ USB_DEVICE(0x10C4, 0x826B) }, 
-	{ USB_DEVICE(0x10C4, 0x8293) }, 
-	{ USB_DEVICE(0x10C4, 0x82F9) }, 
-	{ USB_DEVICE(0x10C4, 0x8341) }, 
-	{ USB_DEVICE(0x10C4, 0x8382) }, 
-	{ USB_DEVICE(0x10C4, 0x83A8) }, 
-	{ USB_DEVICE(0x10C4, 0x83D8) }, 
-	{ USB_DEVICE(0x10C4, 0x8411) }, 
-	{ USB_DEVICE(0x10C4, 0x8418) }, 
-	{ USB_DEVICE(0x10C4, 0x846E) }, 
-	{ USB_DEVICE(0x10C4, 0x8477) }, 
-	{ USB_DEVICE(0x10C4, 0x85EA) }, 
-	{ USB_DEVICE(0x10C4, 0x85EB) }, 
-	{ USB_DEVICE(0x10C4, 0x8664) }, 
-	{ USB_DEVICE(0x10C4, 0x8665) }, 
-	{ USB_DEVICE(0x10C4, 0xEA60) }, 
-	{ USB_DEVICE(0x10C4, 0xEA61) }, 
-	{ USB_DEVICE(0x10C4, 0xEA70) }, 
-	{ USB_DEVICE(0x10C4, 0xEA80) }, 
-	{ USB_DEVICE(0x10C4, 0xEA71) }, 
-	{ USB_DEVICE(0x10C4, 0xF001) }, 
-	{ USB_DEVICE(0x10C4, 0xF002) }, 
-	{ USB_DEVICE(0x10C4, 0xF003) }, 
-	{ USB_DEVICE(0x10C4, 0xF004) }, 
-	{ USB_DEVICE(0x10C5, 0xEA61) }, 
-	{ USB_DEVICE(0x10CE, 0xEA6A) }, 
-	{ USB_DEVICE(0x13AD, 0x9999) }, 
-	{ USB_DEVICE(0x1555, 0x0004) }, 
-	{ USB_DEVICE(0x166A, 0x0303) }, 
-	{ USB_DEVICE(0x16D6, 0x0001) }, 
-	{ USB_DEVICE(0x16DC, 0x0010) }, 
-	{ USB_DEVICE(0x16DC, 0x0011) }, 
-	{ USB_DEVICE(0x16DC, 0x0012) }, 
-	{ USB_DEVICE(0x16DC, 0x0015) }, 
-	{ USB_DEVICE(0x17A8, 0x0001) }, 
-	{ USB_DEVICE(0x17A8, 0x0005) }, 
-	{ USB_DEVICE(0x17F4, 0xAAAA) }, 
-	{ USB_DEVICE(0x1843, 0x0200) }, 
-	{ USB_DEVICE(0x18EF, 0xE00F) }, 
-	{ USB_DEVICE(0x1BE3, 0x07A6) }, 
-	{ USB_DEVICE(0x3195, 0xF190) }, 
-	{ USB_DEVICE(0x413C, 0x9500) }, 
-	{ } 
+	{ USB_DEVICE(0x045B, 0x0053) }, /* Renesas RX610 RX-Stick */
+	{ USB_DEVICE(0x0471, 0x066A) }, /* AKTAKOM ACE-1001 cable */
+	{ USB_DEVICE(0x0489, 0xE000) }, /* Pirelli Broadband S.p.A, DP-L10 SIP/GSM Mobile */
+	{ USB_DEVICE(0x0489, 0xE003) }, /* Pirelli Broadband S.p.A, DP-L10 SIP/GSM Mobile */
+	{ USB_DEVICE(0x0745, 0x1000) }, /* CipherLab USB CCD Barcode Scanner 1000 */
+	{ USB_DEVICE(0x08e6, 0x5501) }, /* Gemalto Prox-PU/CU contactless smartcard reader */
+	{ USB_DEVICE(0x08FD, 0x000A) }, /* Digianswer A/S , ZigBee/802.15.4 MAC Device */
+	{ USB_DEVICE(0x0BED, 0x1100) }, /* MEI (TM) Cashflow-SC Bill/Voucher Acceptor */
+	{ USB_DEVICE(0x0BED, 0x1101) }, /* MEI series 2000 Combo Acceptor */
+	{ USB_DEVICE(0x0FCF, 0x1003) }, /* Dynastream ANT development board */
+	{ USB_DEVICE(0x0FCF, 0x1004) }, /* Dynastream ANT2USB */
+	{ USB_DEVICE(0x0FCF, 0x1006) }, /* Dynastream ANT development board */
+	{ USB_DEVICE(0x10A6, 0xAA26) }, /* Knock-off DCU-11 cable */
+	{ USB_DEVICE(0x10AB, 0x10C5) }, /* Siemens MC60 Cable */
+	{ USB_DEVICE(0x10B5, 0xAC70) }, /* Nokia CA-42 USB */
+	{ USB_DEVICE(0x10C4, 0x0F91) }, /* Vstabi */
+	{ USB_DEVICE(0x10C4, 0x1101) }, /* Arkham Technology DS101 Bus Monitor */
+	{ USB_DEVICE(0x10C4, 0x1601) }, /* Arkham Technology DS101 Adapter */
+	{ USB_DEVICE(0x10C4, 0x800A) }, /* SPORTident BSM7-D-USB main station */
+	{ USB_DEVICE(0x10C4, 0x803B) }, /* Pololu USB-serial converter */
+	{ USB_DEVICE(0x10C4, 0x8044) }, /* Cygnal Debug Adapter */
+	{ USB_DEVICE(0x10C4, 0x804E) }, /* Software Bisque Paramount ME build-in converter */
+	{ USB_DEVICE(0x10C4, 0x8053) }, /* Enfora EDG1228 */
+	{ USB_DEVICE(0x10C4, 0x8054) }, /* Enfora GSM2228 */
+	{ USB_DEVICE(0x10C4, 0x8066) }, /* Argussoft In-System Programmer */
+	{ USB_DEVICE(0x10C4, 0x806F) }, /* IMS USB to RS422 Converter Cable */
+	{ USB_DEVICE(0x10C4, 0x807A) }, /* Crumb128 board */
+	{ USB_DEVICE(0x10C4, 0x80C4) }, /* Cygnal Integrated Products, Inc., Optris infrared thermometer */
+	{ USB_DEVICE(0x10C4, 0x80CA) }, /* Degree Controls Inc */
+	{ USB_DEVICE(0x10C4, 0x80DD) }, /* Tracient RFID */
+	{ USB_DEVICE(0x10C4, 0x80F6) }, /* Suunto sports instrument */
+	{ USB_DEVICE(0x10C4, 0x8115) }, /* Arygon NFC/Mifare Reader */
+	{ USB_DEVICE(0x10C4, 0x813D) }, /* Burnside Telecom Deskmobile */
+	{ USB_DEVICE(0x10C4, 0x813F) }, /* Tams Master Easy Control */
+	{ USB_DEVICE(0x10C4, 0x814A) }, /* West Mountain Radio RIGblaster P&P */
+	{ USB_DEVICE(0x10C4, 0x814B) }, /* West Mountain Radio RIGtalk */
+	{ USB_DEVICE(0x10C4, 0x8156) }, /* B&G H3000 link cable */
+	{ USB_DEVICE(0x10C4, 0x815E) }, /* Helicomm IP-Link 1220-DVM */
+	{ USB_DEVICE(0x10C4, 0x818B) }, /* AVIT Research USB to TTL */
+	{ USB_DEVICE(0x10C4, 0x819F) }, /* MJS USB Toslink Switcher */
+	{ USB_DEVICE(0x10C4, 0x81A6) }, /* ThinkOptics WavIt */
+	{ USB_DEVICE(0x10C4, 0x81A9) }, /* Multiplex RC Interface */
+	{ USB_DEVICE(0x10C4, 0x81AC) }, /* MSD Dash Hawk */
+	{ USB_DEVICE(0x10C4, 0x81AD) }, /* INSYS USB Modem */
+	{ USB_DEVICE(0x10C4, 0x81C8) }, /* Lipowsky Industrie Elektronik GmbH, Baby-JTAG */
+	{ USB_DEVICE(0x10C4, 0x81E2) }, /* Lipowsky Industrie Elektronik GmbH, Baby-LIN */
+	{ USB_DEVICE(0x10C4, 0x81E7) }, /* Aerocomm Radio */
+	{ USB_DEVICE(0x10C4, 0x81E8) }, /* Zephyr Bioharness */
+	{ USB_DEVICE(0x10C4, 0x81F2) }, /* C1007 HF band RFID controller */
+	{ USB_DEVICE(0x10C4, 0x8218) }, /* Lipowsky Industrie Elektronik GmbH, HARP-1 */
+	{ USB_DEVICE(0x10C4, 0x822B) }, /* Modem EDGE(GSM) Comander 2 */
+	{ USB_DEVICE(0x10C4, 0x826B) }, /* Cygnal Integrated Products, Inc., Fasttrax GPS demonstration module */
+	{ USB_DEVICE(0x10C4, 0x8293) }, /* Telegesis ETRX2USB */
+	{ USB_DEVICE(0x10C4, 0x82F9) }, /* Procyon AVS */
+	{ USB_DEVICE(0x10C4, 0x8341) }, /* Siemens MC35PU GPRS Modem */
+	{ USB_DEVICE(0x10C4, 0x8382) }, /* Cygnal Integrated Products, Inc. */
+	{ USB_DEVICE(0x10C4, 0x83A8) }, /* Amber Wireless AMB2560 */
+	{ USB_DEVICE(0x10C4, 0x83D8) }, /* DekTec DTA Plus VHF/UHF Booster/Attenuator */
+	{ USB_DEVICE(0x10C4, 0x8411) }, /* Kyocera GPS Module */
+	{ USB_DEVICE(0x10C4, 0x8418) }, /* IRZ Automation Teleport SG-10 GSM/GPRS Modem */
+	{ USB_DEVICE(0x10C4, 0x846E) }, /* BEI USB Sensor Interface (VCP) */
+	{ USB_DEVICE(0x10C4, 0x8477) }, /* Balluff RFID */
+	{ USB_DEVICE(0x10C4, 0x85EA) }, /* AC-Services IBUS-IF */
+	{ USB_DEVICE(0x10C4, 0x85EB) }, /* AC-Services CIS-IBUS */
+	{ USB_DEVICE(0x10C4, 0x8664) }, /* AC-Services CAN-IF */
+	{ USB_DEVICE(0x10C4, 0x8665) }, /* AC-Services OBD-IF */
+	{ USB_DEVICE(0x10C4, 0xEA60) }, /* Silicon Labs factory default */
+	{ USB_DEVICE(0x10C4, 0xEA61) }, /* Silicon Labs factory default */
+	{ USB_DEVICE(0x10C4, 0xEA70) }, /* Silicon Labs factory default */
+	{ USB_DEVICE(0x10C4, 0xEA80) }, /* Silicon Labs factory default */
+	{ USB_DEVICE(0x10C4, 0xEA71) }, /* Infinity GPS-MIC-1 Radio Monophone */
+	{ USB_DEVICE(0x10C4, 0xF001) }, /* Elan Digital Systems USBscope50 */
+	{ USB_DEVICE(0x10C4, 0xF002) }, /* Elan Digital Systems USBwave12 */
+	{ USB_DEVICE(0x10C4, 0xF003) }, /* Elan Digital Systems USBpulse100 */
+	{ USB_DEVICE(0x10C4, 0xF004) }, /* Elan Digital Systems USBcount50 */
+	{ USB_DEVICE(0x10C5, 0xEA61) }, /* Silicon Labs MobiData GPRS USB Modem */
+	{ USB_DEVICE(0x10CE, 0xEA6A) }, /* Silicon Labs MobiData GPRS USB Modem 100EU */
+	{ USB_DEVICE(0x13AD, 0x9999) }, /* Baltech card reader */
+	{ USB_DEVICE(0x1555, 0x0004) }, /* Owen AC4 USB-RS485 Converter */
+	{ USB_DEVICE(0x166A, 0x0303) }, /* Clipsal 5500PCU C-Bus USB interface */
+	{ USB_DEVICE(0x16D6, 0x0001) }, /* Jablotron serial interface */
+	{ USB_DEVICE(0x16DC, 0x0010) }, /* W-IE-NE-R Plein & Baus GmbH PL512 Power Supply */
+	{ USB_DEVICE(0x16DC, 0x0011) }, /* W-IE-NE-R Plein & Baus GmbH RCM Remote Control for MARATON Power Supply */
+	{ USB_DEVICE(0x16DC, 0x0012) }, /* W-IE-NE-R Plein & Baus GmbH MPOD Multi Channel Power Supply */
+	{ USB_DEVICE(0x16DC, 0x0015) }, /* W-IE-NE-R Plein & Baus GmbH CML Control, Monitoring and Data Logger */
+	{ USB_DEVICE(0x17A8, 0x0001) }, /* Kamstrup Optical Eye/3-wire */
+	{ USB_DEVICE(0x17A8, 0x0005) }, /* Kamstrup M-Bus Master MultiPort 250D */
+	{ USB_DEVICE(0x17F4, 0xAAAA) }, /* Wavesense Jazz blood glucose meter */
+	{ USB_DEVICE(0x1843, 0x0200) }, /* Vaisala USB Instrument Cable */
+	{ USB_DEVICE(0x18EF, 0xE00F) }, /* ELV USB-I2C-Interface */
+	{ USB_DEVICE(0x1BE3, 0x07A6) }, /* WAGO 750-923 USB Service Cable */
+	{ USB_DEVICE(0x3195, 0xF190) }, /* Link Instruments MSO-19 */
+	{ USB_DEVICE(0x413C, 0x9500) }, /* DW700 GPS USB interface */
+	{ } /* Terminating Entry */
 };
 
 MODULE_DEVICE_TABLE(usb, id_table);

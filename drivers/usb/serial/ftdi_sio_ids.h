@@ -475,16 +475,32 @@
 #define OLIMEX_ARM_USB_OCD_PID		0x0003
 #define OLIMEX_ARM_USB_OCD_H_PID	0x002b
 
-#define TELLDUS_VID			0x1781	
-#define TELLDUS_TELLSTICK_PID		0x0C30	
+/*
+ * Telldus Technologies
+ */
+#define TELLDUS_VID			0x1781	/* Vendor ID */
+#define TELLDUS_TELLSTICK_PID		0x0C30	/* RF control dongle 433 MHz using FT232RL */
 
-#define RTSYSTEMS_VID			0x2100	
-#define RTSYSTEMS_SERIAL_VX7_PID	0x9e52	
-#define RTSYSTEMS_CT29B_PID		0x9e54	
+/*
+ * RT Systems programming cables for various ham radios
+ */
+#define RTSYSTEMS_VID			0x2100	/* Vendor ID */
+#define RTSYSTEMS_SERIAL_VX7_PID	0x9e52	/* Serial converter for VX-7 Radios using FT232RL */
+#define RTSYSTEMS_CT29B_PID		0x9e54	/* CT29B Radio Cable */
+#define RTSYSTEMS_RTS01_PID		0x9e57	/* USB-RTS01 Radio Cable */
 
-#define PI_VID              0x1a72
-#define PI_E861_PID         0x1008
 
+/*
+ * Physik Instrumente
+ * http://www.physikinstrumente.com/en/products/
+ */
+#define PI_VID              0x1a72  /* Vendor ID */
+#define PI_E861_PID         0x1008  /* E-861 piezo controller USB connection */
+
+/*
+ * Bayer Ascensia Contour blood glucose meter USB-converter cable.
+ * http://winglucofacts.com/cables/
+ */
 #define BAYER_VID                      0x1A79
 #define BAYER_CONTOUR_CABLE_PID        0x6001
 

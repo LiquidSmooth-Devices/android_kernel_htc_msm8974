@@ -87,15 +87,25 @@ struct usb_hcd {
 	unsigned		uses_new_polling:1;
 	unsigned		wireless:1;	
 	unsigned		authorized_default:1;
-	unsigned		has_tt:1;	
-	unsigned		broken_pci_sleep:1;	
+	unsigned		has_tt:1;	/* Integrated TT in root hub */
 
-	unsigned int		irq;		
-	void __iomem		*regs;		
-	u64			rsrc_start;	
-	u64			rsrc_len;	
-	unsigned		power_budget;	
+	unsigned int		irq;		/* irq allocated */
+	void __iomem		*regs;		/* device memory/io */
+	u64			rsrc_start;	/* memory/io resource start */
+	u64			rsrc_len;	/* memory/io resource length */
+	unsigned		power_budget;	/* in mA, 0 = no limit */
 
+	/* bandwidth_mutex should be taken before adding or removing
+	 * any new bus bandwidth constraints:
+	 *   1. Before adding a configuration for a new device.
+	 *   2. Before removing the configuration to put the device into
+	 *      the addressed state.
+	 *   3. Before selecting a different configuration.
+	 *   4. Before selecting an alternate interface setting.
+	 *
+	 * bandwidth_mutex should be dropped after a successful control message
+	 * to the device, or resetting the bandwidth after a failed attempt.
+	 */
 	struct mutex		*bandwidth_mutex;
 	struct usb_hcd		*shared_hcd;
 	struct usb_hcd		*primary_hcd;

@@ -33,8 +33,8 @@ static int atmel_trng_read(struct hwrng *rng, void *buf, size_t max,
 	struct atmel_trng *trng = container_of(rng, struct atmel_trng, rng);
 	u32 *data = buf;
 
-	
-	if (readl(trng->base + TRNG_ODATA) & 1) {
+	/* data ready? */
+	if (readl(trng->base + TRNG_ISR) & 1) {
 		*data = readl(trng->base + TRNG_ODATA);
 		/*
 		  ensure data ready is only set again AFTER the next data

@@ -323,7 +323,7 @@ intel_dp_aux_ch(struct intel_dp *intel_dp,
 	int recv_bytes;
 	uint32_t status;
 	uint32_t aux_clock_divider;
-	int try, precharge = 5;
+	int try, precharge;
 
 	intel_dp_check_edp(intel_dp);
 	if (is_cpu_edp(intel_dp)) {
@@ -336,7 +336,12 @@ intel_dp_aux_ch(struct intel_dp *intel_dp,
 	else
 		aux_clock_divider = intel_hrawclk(dev) / 2;
 
-	
+	if (IS_GEN6(dev))
+		precharge = 3;
+	else
+		precharge = 5;
+
+	/* Try to wait for any previous AUX channel activity */
 	for (try = 0; try < 3; try++) {
 		status = I915_READ(ch_ctl);
 		if ((status & DP_AUX_CH_CTL_SEND_BUSY) == 0)

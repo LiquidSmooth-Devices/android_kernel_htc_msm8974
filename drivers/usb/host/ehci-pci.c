@@ -123,14 +123,6 @@ static int ehci_pci_setup(struct usb_hcd *hcd)
 			hcd->has_tt = 1;
 			tdi_reset(ehci);
 		}
-		if (pdev->subsystem_vendor == PCI_VENDOR_ID_ASUSTEK) {
-			
-			if (pdev->device == 0x1c26 || pdev->device == 0x1c2d) {
-				ehci_info(ehci, "broken D3 during system sleep on ASUS\n");
-				hcd->broken_pci_sleep = 1;
-				device_set_wakeup_capable(&pdev->dev, false);
-			}
-		}
 		break;
 	case PCI_VENDOR_ID_TDI:
 		if (pdev->device == PCI_DEVICE_ID_TDI_EHCI) {

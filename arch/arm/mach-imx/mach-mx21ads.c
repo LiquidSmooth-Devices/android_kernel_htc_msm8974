@@ -29,7 +29,7 @@
 #include "devices-imx21.h"
 
 #define MX21ADS_MMIO_BASE_ADDR   0xf5000000
-#define MX21ADS_MMIO_SIZE        SZ_16M
+#define MX21ADS_MMIO_SIZE        0xc00000
 
 #define MX21ADS_REG_ADDR(offset)    (void __force __iomem *) \
 		(MX21ADS_MMIO_BASE_ADDR + (offset))

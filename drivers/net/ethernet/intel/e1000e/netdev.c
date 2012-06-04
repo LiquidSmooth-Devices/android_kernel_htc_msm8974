@@ -4442,15 +4442,6 @@ static int e1000_change_mtu(struct net_device *netdev, int new_mtu)
 		e_err("Jumbo Frames not supported on 82579 when CRC stripping is disabled.\n");
 		return -EINVAL;
 	}
-
-	
-	if (((adapter->hw.mac.type == e1000_82573) ||
-	     (adapter->hw.mac.type == e1000_82574)) &&
-	    (max_frame > ETH_FRAME_LEN + ETH_FCS_LEN)) {
-		adapter->flags2 |= FLAG2_DISABLE_ASPM_L1;
-		e1000e_disable_aspm(adapter->pdev, PCIE_LINK_STATE_L1);
-	}
-
 	while (test_and_set_bit(__E1000_RESETTING, &adapter->state))
 		usleep_range(1000, 2000);
 	

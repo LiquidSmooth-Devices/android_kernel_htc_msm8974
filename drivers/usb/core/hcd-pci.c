@@ -418,11 +418,10 @@ static int hcd_pci_suspend_noirq(struct device *dev)
 
 	pci_save_state(pci_dev);
 
-	if (hcd->broken_pci_sleep) {
-		dev_dbg(dev, "Staying in PCI D0\n");
-		return retval;
-	}
-
+	/* If the root hub is dead rather than suspended, disallow remote
+	 * wakeup.  usb_hc_died() should ensure that both hosts are marked as
+	 * dying, so we only need to check the primary roothub.
+	 */
 	if (HCD_DEAD(hcd))
 		device_set_wakeup_enable(dev, 0);
 	dev_dbg(dev, "wakeup: %d\n", device_may_wakeup(dev));

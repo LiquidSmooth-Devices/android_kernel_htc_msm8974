@@ -2043,7 +2043,6 @@ static int wm8904_probe(struct snd_soc_codec *codec)
 {
 	struct wm8904_priv *wm8904 = snd_soc_codec_get_drvdata(codec);
 	struct wm8904_pdata *pdata = wm8904->pdata;
-	u16 *reg_cache = codec->reg_cache;
 	int ret, i;
 
 	codec->cache_sync = 1;
@@ -2139,14 +2138,18 @@ static int wm8904_probe(struct snd_soc_codec *codec)
 			if (!pdata->gpio_cfg[i])
 				continue;
 
-			reg_cache[WM8904_GPIO_CONTROL_1 + i]
-				= pdata->gpio_cfg[i] & 0xffff;
+			regmap_update_bits(wm8904->regmap,
+					   WM8904_GPIO_CONTROL_1 + i,
+					   0xffff,
+					   pdata->gpio_cfg[i]);
 		}
 
 		
 		for (i = 0; i < WM8904_MIC_REGS; i++)
-			reg_cache[WM8904_MIC_BIAS_CONTROL_0 + i]
-				= pdata->mic_cfg[i];
+			regmap_update_bits(wm8904->regmap,
+					   WM8904_MIC_BIAS_CONTROL_0 + i,
+					   0xffff,
+					   pdata->mic_cfg[i]);
 	}
 
 	snd_soc_update_bits(codec, WM8904_CLASS_W_0,
