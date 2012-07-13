@@ -447,7 +447,11 @@ mwifiex_dump_station_info(struct mwifiex_private *priv,
 			      HostCmd_ACT_GEN_GET, DTIM_PERIOD_I,
 			      &priv->dtim_period);
 
-	if ((priv->tx_htinfo & BIT(0)) && (priv->tx_rate < 8)) {
+	/*
+	 * Bit 0 in tx_htinfo indicates that current Tx rate is 11n rate. Valid
+	 * MCS index values for us are 0 to 15.
+	 */
+	if ((priv->tx_htinfo & BIT(0)) && (priv->tx_rate < 16)) {
 		sinfo->txrate.mcs = priv->tx_rate;
 		sinfo->txrate.flags |= RATE_INFO_FLAGS_MCS;
 		

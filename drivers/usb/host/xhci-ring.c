@@ -87,11 +87,20 @@ static void inc_deq(struct xhci_hcd *xhci, struct xhci_ring *ring)
 
 	ring->deq_updates++;
 
+	/*
+	 * If this is not event ring, and the dequeue pointer
+	 * is not on a link TRB, there is one more usable TRB
+	 */
 	if (ring->type != TYPE_EVENT &&
 			!last_trb(xhci, ring, ring->deq_seg, ring->dequeue))
 		ring->num_trbs_free++;
 
 	do {
+		/*
+		 * Update the dequeue pointer further if that was a link TRB or
+		 * we're at the end of an event ring segment (which doesn't have
+		 * link TRBS)
+		 */
 		if (last_trb(xhci, ring, ring->deq_seg, ring->dequeue)) {
 			if (ring->type == TYPE_EVENT &&
 					last_trb_on_last_seg(xhci, ring,

@@ -402,8 +402,8 @@ static int dbgp_ehci_startup(void)
 	
 	writel(FLAG_CF, &ehci_regs->configured_flag);
 
-	
-	loop = 10;
+	/* Wait until the controller is no longer halted */
+	loop = 1000;
 	do {
 		status = readl(&ehci_regs->status);
 		if (!(status & STS_HALT))
