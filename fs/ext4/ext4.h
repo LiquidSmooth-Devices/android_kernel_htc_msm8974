@@ -888,8 +888,7 @@ struct ext4_sb_info {
 	unsigned long s_desc_per_block;	
 	ext4_group_t s_groups_count;	
 	ext4_group_t s_blockfile_groups;
-	unsigned long s_overhead_last;  
-	unsigned long s_blocks_last;    
+    unsigned long s_overhead;   
 	unsigned int s_cluster_ratio;	
 	unsigned int s_cluster_bits;	
 	loff_t s_bitmap_maxbytes;	
@@ -1434,7 +1433,8 @@ struct mmpd_data {
 # define ATTRIB_NORET	__attribute__((noreturn))
 # define NORET_AND	noreturn,
 
-extern unsigned int ext4_count_free(struct buffer_head *, unsigned);
+/* bitmap.c */
+extern unsigned int ext4_count_free(char *bitmap, unsigned numchars);
 
 extern unsigned int ext4_block_group(struct super_block *sb,
 			ext4_fsblk_t blocknr);
@@ -1588,6 +1588,7 @@ extern int ext4_group_extend(struct super_block *sb,
 				ext4_fsblk_t n_blocks_count);
 extern int ext4_resize_fs(struct super_block *sb, ext4_fsblk_t n_blocks_count);
 
+extern int ext4_calculate_overhead(struct super_block *sb);
 extern void *ext4_kvmalloc(size_t size, gfp_t flags);
 extern void *ext4_kvzalloc(size_t size, gfp_t flags);
 extern void ext4_kvfree(void *ptr);

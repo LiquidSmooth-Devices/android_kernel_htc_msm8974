@@ -691,6 +691,21 @@ void usb_enable_xhci_ports(struct pci_dev *xhci_pdev)
 }
 EXPORT_SYMBOL_GPL(usb_enable_xhci_ports);
 
+void usb_disable_xhci_ports(struct pci_dev *xhci_pdev)
+{
+	pci_write_config_dword(xhci_pdev, USB_INTEL_USB3_PSSEN, 0x0);
+	pci_write_config_dword(xhci_pdev, USB_INTEL_XUSB2PR, 0x0);
+}
+EXPORT_SYMBOL_GPL(usb_disable_xhci_ports);
+
+/**
+ * PCI Quirks for xHCI.
+ *
+ * Takes care of the handoff between the Pre-OS (i.e. BIOS) and the OS.
+ * It signals to the BIOS that the OS wants control of the host controller,
+ * and then waits 5 seconds for the BIOS to hand over control.
+ * If we timeout, assume the BIOS is broken and take control anyway.
+ */
 static void __devinit quirk_usb_handoff_xhci(struct pci_dev *pdev)
 {
 	void __iomem *base;

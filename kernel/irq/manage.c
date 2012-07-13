@@ -713,9 +713,6 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		return -ENOSYS;
 	if (!try_module_get(desc->owner))
 		return -ENODEV;
-	if (new->flags & IRQF_SAMPLE_RANDOM) {
-		rand_initialize_irq(irq);
-	}
 
 	nested = irq_settings_is_nested_thread(desc);
 	if (nested) {
