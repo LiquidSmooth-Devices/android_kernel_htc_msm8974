@@ -1998,8 +1998,6 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 
 		set_pgdat_percpu_threshold(pgdat, calculate_normal_threshold);
 
-		reset_isolation_suitable(pgdat);
-
 		if (!kthread_should_stop())
 			schedule();
 

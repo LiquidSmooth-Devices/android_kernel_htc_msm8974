@@ -235,13 +235,10 @@ void rs690_line_buffer_adjust(struct radeon_device *rdev,
 extern int rs690_mc_wait_for_idle(struct radeon_device *rdev);
 
 struct rv515_mc_save {
-	u32 d1vga_control;
-	u32 d2vga_control;
 	u32 vga_render_control;
 	u32 vga_hdp_control;
-	u32 d1crtc_control;
-	u32 d2crtc_control;
 };
+
 int rv515_init(struct radeon_device *rdev);
 void rv515_fini(struct radeon_device *rdev);
 uint32_t rv515_mc_rreg(struct radeon_device *rdev, uint32_t reg);
@@ -359,11 +356,10 @@ void r700_cp_stop(struct radeon_device *rdev);
 void r700_cp_fini(struct radeon_device *rdev);
 
 struct evergreen_mc_save {
-	u32 vga_control[6];
 	u32 vga_render_control;
 	u32 vga_hdp_control;
-	u32 crtc_control[6];
 };
+
 void evergreen_pcie_gart_tlb_flush(struct radeon_device *rdev);
 int evergreen_init(struct radeon_device *rdev);
 void evergreen_fini(struct radeon_device *rdev);
