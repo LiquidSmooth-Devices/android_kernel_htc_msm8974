@@ -2207,15 +2207,12 @@ ieee80211_rx_mgmt_assoc_resp(struct ieee80211_sub_if_data *sdata,
 		       sdata->name, mgmt->sa, status_code);
 		ieee80211_destroy_assoc_data(sdata, false);
 	} else {
-		printk(KERN_DEBUG "%s: associated\n", sdata->name);
-
 		if (!ieee80211_assoc_success(sdata, *bss, mgmt, len)) {
-			/* oops -- internal error -- send timeout for now */
-			ieee80211_destroy_assoc_data(sdata, true);
-			sta_info_destroy_addr(sdata, mgmt->bssid);
+			ieee80211_destroy_assoc_data(sdata, false);
 			cfg80211_put_bss(*bss);
 			return RX_MGMT_CFG80211_ASSOC_TIMEOUT;
 		}
+		printk(KERN_DEBUG "%s: associated\n", sdata->name);
 
 		/*
 		 * destroy assoc_data afterwards, as otherwise an idle
@@ -3317,10 +3314,17 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 
 	ifmgd->beacon_crc_valid = false;
 
-	for (i = 0; i < req->crypto.n_ciphers_pairwise; i++) {
+	/*
+	 * IEEE802.11n does not allow TKIP/WEP as pairwise ciphers in HT mode.
+	 * We still associate in non-HT mode (11a/b/g) if any one of these
+	 * ciphers is configured as pairwise.
+	 * We can set this to true for non-11n hardware, that'll be checked
+	 * separately along with the peer capabilities.
+	 */
+	for (i = 0; i < req->crypto.n_ciphers_pairwise; i++)
 		if (req->crypto.ciphers_pairwise[i] == WLAN_CIPHER_SUITE_WEP40 ||
 		    req->crypto.ciphers_pairwise[i] == WLAN_CIPHER_SUITE_TKIP ||
-		    req->crypto.ciphers_pairwise[i] == WLAN_CIPHER_SUITE_WEP104) {
+		    req->crypto.ciphers_pairwise[i] == WLAN_CIPHER_SUITE_WEP104)
 			ifmgd->flags |= IEEE80211_STA_DISABLE_11N;
 			ifmgd->flags |= IEEE80211_STA_DISABLE_VHT;
 			netdev_info(sdata->dev,
