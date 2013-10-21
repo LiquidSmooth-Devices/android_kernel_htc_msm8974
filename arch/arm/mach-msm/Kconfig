@@ -3218,7 +3218,7 @@ config MACH_NAME
           Support for MACH Name
 
 config FORCE_FAST_CHARGE
-	bool "Increase input current limit to 1100mA when charging via USB"
+	bool "Increase input current limit to 1100mA when charging via USB
 	default y
 	help
 	  A simple sysfs interface to increase input current limit to
@@ -3237,3 +3237,9 @@ config HAS_MACH_MEMUTILS
 	bool "Motorola MSM memcpy enhancements"
 	help
 	Faster memcpy performance for Krait
+
+config INTELLI_PLUG
+	bool "Enable intelli-plug cpu hotplug driver"
+	default n
+	help
+	  Generic Intelli-plug cpu hotplug driver for ARM SOCs
