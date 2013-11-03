@@ -38,6 +38,7 @@
 #ifdef CONFIG_HTC_PNPMGR
 extern void set_gpu_clk(unsigned int);
 #endif
+
 #define INIT_UDELAY		200
 #define MAX_UDELAY		2000
 
