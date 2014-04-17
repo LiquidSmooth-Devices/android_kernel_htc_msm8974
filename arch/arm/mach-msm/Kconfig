@@ -3223,6 +3223,12 @@ config FORCE_FAST_CHARGE
 	  A simple sysfs interface to increase input current limit to
 	  1100mA when charging via USB.
 
+config MSM_CPU_VOLTAGE_CONTROL
+	bool "Userspace CPU Voltage Control"
+	default y
+	help
+	  This enables userspace CPU Voltage Control.
+
 endif
 
 config PERFLOCK
