@@ -146,12 +146,6 @@ config CPU_FREQ_DEFAULT_GOV_NIGHTMARE
   select CPU_FREQ_GOV_NIGHTMARE
   help
 
-config CPU_FREQ_DEFAULT_GOV_SMARTASSH3
-	bool "smartassH3"
-	select CPU_FREQ_GOV_SMARTASSH3
-	help
-	  Use the CPUFreq governor 'smartassH3' as default.
-
 config CPU_FREQ_DEFAULT_GOV_WHEATLEY
 	bool "wheatley"
 	select CPU_FREQ_GOV_WHEATLEY
@@ -323,12 +317,6 @@ config CPU_FREQ_GOV_ADAPTIVE
 config CPU_FREQ_GOV_NIGHTMARE
 	tristate "'nightmare' cpufreq governor"
 	depends on CPU_FREQ
-
-config CPU_FREQ_GOV_SMARTASSH3
-	tristate "'smartassH3' cpufreq governor"
-	depends on CPU_FREQ
-	help
-    		'smartassH3' - a "smart" governor
 
 config CPU_FREQ_GOV_WHEATLEY
 	tristate "'wheatley' cpufreq governor"
