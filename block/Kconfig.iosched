@@ -118,6 +118,12 @@ config IOSCHED_ZEN
 	  Should work best with devices where there is no travel delay.
 	  Enable group IO scheduling in CFQ.
 
+config IOSCHED_TRIPNDROID
+	tristate "Tripndroid"
+	default y
+	---help---
+	  The Trip N Droid scheduler
+
 choice
 	prompt "Default I/O scheduler"
 	default DEFAULT_CFQ
@@ -167,6 +173,9 @@ choice
 	config DEFAULT_ZEN
 		bool "ZEN" if IOSCHED_ZEN=y
 
+	config DEFAULT_TRIPNDROID
+		bool "TRIPNDROID" if IOSCHED_TRIPNDROID=y
+
 endchoice
 
 config DEFAULT_IOSCHED
@@ -180,6 +189,7 @@ config DEFAULT_IOSCHED
 	default "sio" if DEFAULT_SIO
 	default "vr" if DEFAULT_VR
 	default "zen" if DEFAULT_ZEN
+	default "tripndroid" if DEFAULT_TRIPNDROID
 
 endmenu
 
