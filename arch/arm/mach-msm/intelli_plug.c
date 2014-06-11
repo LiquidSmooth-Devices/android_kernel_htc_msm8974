@@ -61,6 +61,20 @@ module_param(eco_mode_active, uint, 0644);
 static unsigned int touch_boost_active = 0;
 module_param(touch_boost_active, uint, 0644);
 
+static int __init read_eco_mode_cmdline(char *eco_mode)
+{
+	if (strcmp(eco_mode, "0") == 0) {
+		eco_mode_active = 0;
+	} else if (strcmp(eco_mode, "1") == 0){
+		eco_mode_active = 1;
+	} else {
+		eco_mode_active = 0;
+	}
+
+	return 0;
+}
+__setup("eco_mode=", read_eco_mode_cmdline);
+
 //default to something sane rather than zero
 static unsigned int sampling_time = DEF_SAMPLING_MS;
 
