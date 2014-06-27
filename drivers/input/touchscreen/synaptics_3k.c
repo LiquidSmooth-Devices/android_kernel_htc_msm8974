@@ -253,8 +253,6 @@ static irqreturn_t synaptics_irq_thread(int irq, void *ptr);
 
 extern unsigned int get_tamper_sf(void);
 
-static struct input_dev *smart_cover;
-
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_WAKE_GESTURES
 
 #define SWEEP_RIGHT 0x01
@@ -2320,34 +2318,6 @@ static void synaptics_touch_sysfs_remove(void)
 	kobject_del(android_touch_kobj);
 }
 
-static int smart_cover_device_create(void){
-	int err = 0;
-
-	smart_cover = input_allocate_device();
-	if (!smart_cover) {
-		err = -ENOMEM;
-		goto exit;
-	}
-
-	smart_cover->name = "smartcover";
-	smart_cover->phys = "/dev/input/smartcover";
-
-	set_bit(EV_SW, smart_cover->evbit);
-	set_bit(SW_LID, smart_cover->swbit);
-
-	err = input_register_device(smart_cover);
-	if (err) {
-		goto exit_free;
-	}
-	return 0;
-
-exit_free:
-	input_free_device(smart_cover);
-	smart_cover = NULL;
-exit:
-	return err;
-}
-
 static int synaptics_init_panel(struct synaptics_ts_data *ts)
 {
 	int ret = 0;
@@ -3294,9 +3264,6 @@ static int hallsensor_hover_status_handler_func(struct notifier_block *this,
 			ts->cover_enable = 0;
 		else
 			ts->cover_enable = 1;
-
-		input_report_switch(smart_cover, SW_LID, ts->cover_enable);
-		input_sync(smart_cover);
 
 		if (!ts->i2c_to_mcu) {
 			ret = syn_set_cover_func(ts, ts->cover_enable);
@@ -4924,13 +4891,12 @@ static void __devinit synaptics_ts_init_async(void *unused, async_cookie_t cooki
 static int __devinit synaptics_ts_init(void)
 {
 	async_schedule(synaptics_ts_init_async, NULL);
-	smart_cover_device_create();
+
 	return 0;
 }
 static void __exit synaptics_ts_exit(void)
 {
 	i2c_del_driver(&synaptics_ts_driver);
-	input_unregister_device(smart_cover);
 }
 module_init(synaptics_ts_init);
 module_exit(synaptics_ts_exit);
