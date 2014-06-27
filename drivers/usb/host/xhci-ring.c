@@ -1057,6 +1057,7 @@ static void handle_port_status(struct xhci_hcd *xhci,
 			xhci_dbg(xhci, "resume HS port %d\n", port_id);
 			bus_state->resume_done[faked_port_index] = jiffies +
 				msecs_to_jiffies(20);
+			set_bit(faked_port_index, &bus_state->resuming_ports);
 			mod_timer(&hcd->rh_timer,
 				  bus_state->resume_done[faked_port_index]);
 			
@@ -1391,8 +1392,12 @@ static int process_isoc_td(struct xhci_hcd *xhci, struct xhci_td *td,
 	
 	switch (trb_comp_code) {
 	case COMP_SUCCESS:
-		frame->status = 0;
-		break;
+		if (TRB_LEN(le32_to_cpu(event->transfer_len)) == 0) {
+			frame->status = 0;
+			break;
+		}
+		if ((xhci->quirks & XHCI_TRUST_TX_LENGTH))
+			trb_comp_code = COMP_SHORT_TX;
 	case COMP_SHORT_TX:
 		frame->status = td->urb->transfer_flags & URB_SHORT_NOT_OK ?
 				-EREMOTEIO : 0;
@@ -1408,6 +1413,7 @@ static int process_isoc_td(struct xhci_hcd *xhci, struct xhci_td *td,
 		break;
 	case COMP_DEV_ERR:
 	case COMP_STALL:
+	case COMP_TX_ERR:
 		frame->status = -EPROTO;
 		skip_td = true;
 		break;
@@ -1485,13 +1491,16 @@ static int process_bulk_intr_td(struct xhci_hcd *xhci, struct xhci_td *td,
 	switch (trb_comp_code) {
 	case COMP_SUCCESS:
 		
-		if (event_trb != td->last_trb) {
+		if (event_trb != td->last_trb ||
+				TRB_LEN(le32_to_cpu(event->transfer_len)) != 0) {
 			xhci_warn(xhci, "WARN Successful completion "
 					"on short TX\n");
 			if (td->urb->transfer_flags & URB_SHORT_NOT_OK)
 				*status = -EREMOTEIO;
 			else
 				*status = 0;
+			if ((xhci->quirks & XHCI_TRUST_TX_LENGTH))
+				trb_comp_code = COMP_SHORT_TX;
 		} else {
 			*status = 0;
 		}
@@ -1633,6 +1642,13 @@ static int handle_tx_event(struct xhci_hcd *xhci,
 	
 	switch (trb_comp_code) {
 	case COMP_SUCCESS:
+		if (TRB_LEN(le32_to_cpu(event->transfer_len)) == 0)
+			break;
+		if (xhci->quirks & XHCI_TRUST_TX_LENGTH)
+			trb_comp_code = COMP_SHORT_TX;
+		else
+			xhci_warn(xhci, "WARN Successful completion on short TX: "
+					"needs XHCI_TRUST_TX_LENGTH quirk?\n");
 	case COMP_SHORT_TX:
 		break;
 	case COMP_STOP:

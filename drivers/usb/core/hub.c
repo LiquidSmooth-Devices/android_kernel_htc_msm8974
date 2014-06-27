@@ -2121,7 +2121,9 @@ int usb_port_suspend(struct usb_device *udev, pm_message_t msg)
 				NULL, 0,
 				USB_CTRL_SET_TIMEOUT);
 
-		
+		if (udev->usb2_hw_lpm_capable == 1)
+			usb_set_usb2_hardware_lpm(udev, 1);
+
 		if (!PMSG_IS_AUTO(msg))
 			status = 0;
 	} else {

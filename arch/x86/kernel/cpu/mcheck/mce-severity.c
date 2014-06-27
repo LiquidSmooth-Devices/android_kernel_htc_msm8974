@@ -154,10 +154,7 @@ static struct severity {
 
 static int error_context(struct mce *m)
 {
-	if (m->mcgstatus & MCG_STATUS_EIPV)
-		return (m->ip && (m->cs & 3) == 3) ? IN_USER : IN_KERNEL;
-	
-	return IN_KERNEL;
+	return ((m->cs & 3) == 3) ? IN_USER : IN_KERNEL;
 }
 
 int mce_severity(struct mce *m, int tolerant, char **msg)

@@ -14,6 +14,7 @@
 #include "gigaset.h"
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/ratelimit.h>
 #include <linux/isdn/capilli.h>
 #include <linux/isdn/capicmd.h>
 #include <linux/isdn/capiutil.h>
@@ -188,9 +189,13 @@ get_appl(struct gigaset_capi_ctr *iif, u16 appl)
 static inline void dump_cmsg(enum debuglevel level, const char *tag, _cmsg *p)
 {
 #ifdef CONFIG_GIGASET_DEBUG
+	/* dump at most 20 messages in 20 secs */
+	static DEFINE_RATELIMIT_STATE(msg_dump_ratelimit, 20 * HZ, 20);
 	_cdebbuf *cdb;
 
 	if (!(gigaset_debuglevel & level))
+		return;
+	if (!___ratelimit(&msg_dump_ratelimit, tag))
 		return;
 
 	cdb = capi_cmsg2str(p);
@@ -1631,6 +1636,14 @@ static void do_disconnect_req(struct gigaset_capi_ctr *iif,
 
 	
 	if (bcs->apconnstate >= APCONN_ACTIVE) {
+		/* clear it */
+		bcs->apconnstate = ACPONN_SETUP;
+
+		/*
+ 		 * emit DISCONNECT_B3_IND with cause 0x3301
+ 		 * use separate cmsg structure, as the content of iif->acmsg
+ 		 * is still needed for creating the _CONF message
+ 		 */
 		b3cmsg = kmalloc(sizeof(*b3cmsg), GFP_KERNEL);
 		if (!b3cmsg) {
 			dev_err(cs->dev, "%s: out of memory\n", __func__);
@@ -1650,6 +1663,7 @@ static void do_disconnect_req(struct gigaset_capi_ctr *iif,
 		}
 		capi_cmsg2message(b3cmsg,
 				  __skb_put(b3skb, CAPI_DISCONNECT_B3_IND_BASELEN));
+		dump_cmsg(DEBUG_CMD, __func__, b3cmsg);
 		kfree(b3cmsg);
 		capi_ctr_handle_message(&iif->ctr, ap->id, b3skb);
 	}
@@ -1787,16 +1801,16 @@ static void do_reset_b3_req(struct gigaset_capi_ctr *iif,
 		  CapiResetProcedureNotSupportedByCurrentProtocol);
 }
 
-static unsigned long ignored_msg_dump_time;
-
+/*
+ * unsupported CAPI message handler
+ */
 static void do_unsupported(struct gigaset_capi_ctr *iif,
 			   struct gigaset_capi_appl *ap,
 			   struct sk_buff *skb)
 {
 	
 	capi_message2cmsg(&iif->acmsg, skb->data);
-	if (printk_timed_ratelimit(&ignored_msg_dump_time, 30 * 1000))
-		dump_cmsg(DEBUG_CMD, __func__, &iif->acmsg);
+	dump_cmsg(DEBUG_CMD, __func__, &iif->acmsg);
 	send_conf(iif, ap, skb, CapiMessageNotSupportedInCurrentState);
 }
 
@@ -1804,11 +1818,9 @@ static void do_nothing(struct gigaset_capi_ctr *iif,
 		       struct gigaset_capi_appl *ap,
 		       struct sk_buff *skb)
 {
-	if (printk_timed_ratelimit(&ignored_msg_dump_time, 30 * 1000)) {
-		
-		capi_message2cmsg(&iif->acmsg, skb->data);
-		dump_cmsg(DEBUG_CMD, __func__, &iif->acmsg);
-	}
+	/* decode message */
+	capi_message2cmsg(&iif->acmsg, skb->data);
+	dump_cmsg(DEBUG_CMD, __func__, &iif->acmsg);
 	dev_kfree_skb_any(skb);
 }
 

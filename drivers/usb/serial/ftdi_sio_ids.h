@@ -482,6 +482,9 @@
 #define RTSYSTEMS_SERIAL_VX7_PID	0x9e52	
 #define RTSYSTEMS_CT29B_PID		0x9e54	
 
+#define PI_VID              0x1a72
+#define PI_E861_PID         0x1008
+
 #define BAYER_VID                      0x1A79
 #define BAYER_CONTOUR_CABLE_PID        0x6001
 

@@ -1237,7 +1237,6 @@ static int usb_serial_register(struct usb_serial_driver *driver)
 				driver->description);
 		return -EINVAL;
 	}
-	driver->usb_driver->supports_autosuspend = 1;
 
 	
 	mutex_lock(&table_lock);
@@ -1277,6 +1276,9 @@ int usb_serial_register_drivers(struct usb_driver *udriver,
 	udriver->id_table = NULL;
 
 	udriver->no_dynamic_id = 1;
+	udriver->supports_autosuspend = 1;
+	udriver->suspend = usb_serial_suspend;
+	udriver->resume = usb_serial_resume;
 	rc = usb_register(udriver);
 	if (rc)
 		return rc;

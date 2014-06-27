@@ -82,6 +82,9 @@ int xen_irq_from_pirq(unsigned pirq);
 
 int xen_pirq_from_irq(unsigned irq);
 
+/* Return the irq allocated to the gsi */
+int xen_irq_from_gsi(unsigned gsi);
+
 int xen_test_irq_shared(int irq);
 
 #endif	

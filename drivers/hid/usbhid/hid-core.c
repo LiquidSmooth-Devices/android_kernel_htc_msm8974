@@ -371,6 +371,15 @@ static int hid_submit_ctrl(struct hid_device *hid)
 	return 0;
 }
 
+static int irq_out_pump_restart(struct hid_device *hid)
+{
+	struct usbhid_device *usbhid = hid->driver_data;
+
+	if (usbhid->outhead != usbhid->outtail)
+		return hid_submit_out(hid);
+	else
+		return -1;
+}
 
 static void hid_irq_out(struct urb *urb)
 {
@@ -401,8 +410,7 @@ static void hid_irq_out(struct urb *urb)
 	else
 		usbhid->outtail = (usbhid->outtail + 1) & (HID_OUTPUT_FIFO_SIZE - 1);
 
-	if (usbhid->outhead != usbhid->outtail && !hid_submit_out(hid)) {
-		
+	if (!irq_out_pump_restart(hid)) {		
 		spin_unlock_irqrestore(&usbhid->lock, flags);
 		return;
 	}
@@ -413,6 +421,15 @@ static void hid_irq_out(struct urb *urb)
 	wake_up(&usbhid->wait);
 }
 
+static int ctrl_pump_restart(struct hid_device *hid)
+{
+	struct usbhid_device *usbhid = hid->driver_data;
+
+	if (usbhid->ctrlhead != usbhid->ctrltail)
+		return hid_submit_ctrl(hid);
+	else
+		return -1;
+}
 
 static void hid_ctrl(struct urb *urb)
 {
@@ -446,8 +463,7 @@ static void hid_ctrl(struct urb *urb)
 	else
 		usbhid->ctrltail = (usbhid->ctrltail + 1) & (HID_CONTROL_FIFO_SIZE - 1);
 
-	if (usbhid->ctrlhead != usbhid->ctrltail && !hid_submit_ctrl(hid)) {
-		
+	if (!ctrl_pump_restart(hid)) {
 		spin_unlock(&usbhid->lock);
 		return;
 	}
@@ -497,8 +513,16 @@ static void __usbhid_submit_report(struct hid_device *hid, struct hid_report *re
 			}
 			wake_up(&usbhid->wait);
 		} else {
-			if (time_after(jiffies, usbhid->last_out + HZ * 5))
+			if (time_after(jiffies, usbhid->last_out + HZ * 5)) {
+				usb_block_urb(usbhid->urbout);
+				spin_unlock(&usbhid->lock);
 				usb_unlink_urb(usbhid->urbout);
+				spin_lock(&usbhid->lock);
+				usb_unblock_urb(usbhid->urbout);
+				if (!test_bit(HID_OUT_RUNNING, &usbhid->iofl))
+					if (!irq_out_pump_restart(hid))
+						set_bit(HID_OUT_RUNNING, &usbhid->iofl);
+			}
 		}
 		return;
 	}
@@ -534,8 +558,16 @@ static void __usbhid_submit_report(struct hid_device *hid, struct hid_report *re
 		}
 		wake_up(&usbhid->wait);
 	} else {
-		if (time_after(jiffies, usbhid->last_ctrl + HZ * 5))
+		if (time_after(jiffies, usbhid->last_ctrl + HZ * 5)) {
+			usb_block_urb(usbhid->urbctrl);
+			spin_unlock(&usbhid->lock);
 			usb_unlink_urb(usbhid->urbctrl);
+			spin_lock(&usbhid->lock);
+			usb_unblock_urb(usbhid->urbctrl);
+			if (!test_bit(HID_CTRL_RUNNING, &usbhid->iofl))
+				if (!ctrl_pump_restart(hid))
+					set_bit(HID_CTRL_RUNNING, &usbhid->iofl);
+		}
 	}
 }
 

@@ -374,6 +374,59 @@ static __initconst const struct x86_pmu amd_pmu = {
 #define AMD_EVENT_DE		0x000000D0ULL
 #define AMD_EVENT_NB		0x000000E0ULL ... 0x000000F0ULL
 
+/*
+ * AMD family 15h event code/PMC mappings:
+ *
+ * type = event_code & 0x0F0:
+ *
+ * 0x000	FP	PERF_CTL[5:3]
+ * 0x010	FP	PERF_CTL[5:3]
+ * 0x020	LS	PERF_CTL[5:0]
+ * 0x030	LS	PERF_CTL[5:0]
+ * 0x040	DC	PERF_CTL[5:0]
+ * 0x050	DC	PERF_CTL[5:0]
+ * 0x060	CU	PERF_CTL[2:0]
+ * 0x070	CU	PERF_CTL[2:0]
+ * 0x080	IC/DE	PERF_CTL[2:0]
+ * 0x090	IC/DE	PERF_CTL[2:0]
+ * 0x0A0	---
+ * 0x0B0	---
+ * 0x0C0	EX/LS	PERF_CTL[5:0]
+ * 0x0D0	DE	PERF_CTL[2:0]
+ * 0x0E0	NB	NB_PERF_CTL[3:0]
+ * 0x0F0	NB	NB_PERF_CTL[3:0]
+ *
+ * Exceptions:
+ *
+ * 0x000	FP	PERF_CTL[3], PERF_CTL[5:3] (*)
+ * 0x003	FP	PERF_CTL[3]
+ * 0x004	FP	PERF_CTL[3], PERF_CTL[5:3] (*)
+ * 0x00B	FP	PERF_CTL[3]
+ * 0x00D	FP	PERF_CTL[3]
+ * 0x023	DE	PERF_CTL[2:0]
+ * 0x02D	LS	PERF_CTL[3]
+ * 0x02E	LS	PERF_CTL[3,0]
+ * 0x031	LS	PERF_CTL[2:0] (**)
+ * 0x043	CU	PERF_CTL[2:0]
+ * 0x045	CU	PERF_CTL[2:0]
+ * 0x046	CU	PERF_CTL[2:0]
+ * 0x054	CU	PERF_CTL[2:0]
+ * 0x055	CU	PERF_CTL[2:0]
+ * 0x08F	IC	PERF_CTL[0]
+ * 0x187	DE	PERF_CTL[0]
+ * 0x188	DE	PERF_CTL[0]
+ * 0x0DB	EX	PERF_CTL[5:0]
+ * 0x0DC	LS	PERF_CTL[5:0]
+ * 0x0DD	LS	PERF_CTL[5:0]
+ * 0x0DE	LS	PERF_CTL[5:0]
+ * 0x0DF	LS	PERF_CTL[5:0]
+ * 0x1C0	EX	PERF_CTL[5:3]
+ * 0x1D6	EX	PERF_CTL[5:0]
+ * 0x1D8	EX	PERF_CTL[5:0]
+ *
+ * (*)  depending on the umask all FPU counters may be used
+ * (**) only one unitmask enabled at a time
+ */
 
 static struct event_constraint amd_f15_PMC0  = EVENT_CONSTRAINT(0, 0x01, 0);
 static struct event_constraint amd_f15_PMC20 = EVENT_CONSTRAINT(0, 0x07, 0);
@@ -422,6 +475,12 @@ amd_get_event_constraints_f15h(struct cpu_hw_events *cpuc, struct perf_event *ev
 			return &amd_f15_PMC3;
 		case 0x02E:
 			return &amd_f15_PMC30;
+		case 0x031:
+			if (hweight_long(hwc->config & ARCH_PERFMON_EVENTSEL_UMASK) <= 1)
+				return &amd_f15_PMC20;
+			return &emptyconstraint;
+		case 0x1C0:
+			return &amd_f15_PMC53;
 		default:
 			return &amd_f15_PMC50;
 		}

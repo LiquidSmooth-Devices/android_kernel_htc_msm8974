@@ -176,6 +176,7 @@ struct reply_t gigaset_tab_nocid[] =
 								  ACT_INIT} },
 	{RSP_OK,	121, 121, -1,			  0,  0, {ACT_GOTVER,
 								  ACT_INIT} },
+	{RSP_NONE,	121, 121, -1,			120,  0, {ACT_GETSTRING} },
 
 	{RSP_INIT,	  0,   0, SEQ_DLE0,		201,  5, {0},	"^SDLE=0\r"},
 	{RSP_OK,	201, 201, -1,			202, -1},
@@ -1233,8 +1234,9 @@ static void do_action(int action, struct cardstate *cs,
 		s = ev->ptr;
 
 		if (!strcmp(s, "OK")) {
+			/* OK without version string: assume old response */
 			*p_genresp = 1;
-			*p_resp_code = RSP_ERROR;
+			*p_resp_code = RSP_NONE;
 			break;
 		}
 

@@ -340,6 +340,15 @@ void usb_unpoison_urb(struct urb *urb)
 }
 EXPORT_SYMBOL_GPL(usb_unpoison_urb);
 
+void usb_block_urb(struct urb *urb)
+{
+	if (!urb)
+		return;
+
+	atomic_inc(&urb->reject);
+}
+EXPORT_SYMBOL_GPL(usb_block_urb);
+
 void usb_kill_anchored_urbs(struct usb_anchor *anchor)
 {
 	struct urb *victim;

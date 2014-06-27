@@ -708,7 +708,7 @@ static void __sh_mobile_lcdc_start(struct sh_mobile_lcdc_priv *priv)
 		}
 
 		lcdc_write_chan(ch, LDDFR, tmp);
-		lcdc_write_chan(ch, LDMLSR, ch->pitch);
+		lcdc_write_chan(ch, LDMLSR, ch->line_size);
 		lcdc_write_chan(ch, LDSA1R, ch->base_addr_y);
 		if (ch->format->yuv)
 			lcdc_write_chan(ch, LDSA2R, ch->base_addr_c);
@@ -793,6 +793,7 @@ static int sh_mobile_lcdc_start(struct sh_mobile_lcdc_priv *priv)
 
 		ch->base_addr_y = ch->dma_handle;
 		ch->base_addr_c = ch->base_addr_y + ch->xres * ch->yres_virtual;
+		ch->line_size = ch->pitch;
 
 		
 		if (mdev == NULL || mdev->ops == NULL ||
@@ -825,7 +826,7 @@ static int sh_mobile_lcdc_start(struct sh_mobile_lcdc_priv *priv)
 
 		meram = mdev->ops->meram_register(mdev, ch->cfg->meram_cfg,
 					ch->pitch, ch->yres, pixelformat,
-					&ch->pitch);
+					&ch->line_size);
 		if (!IS_ERR(meram)) {
 			mdev->ops->meram_update(mdev, meram,
 					ch->base_addr_y, ch->base_addr_c,

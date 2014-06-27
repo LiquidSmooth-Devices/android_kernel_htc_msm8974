@@ -653,7 +653,7 @@ static void fsl_queue_td(struct fsl_ep *ep, struct fsl_req *req)
 		lastreq = list_entry(ep->queue.prev, struct fsl_req, queue);
 		lastreq->tail->next_td_ptr =
 			cpu_to_hc32(req->head->td_dma & DTD_ADDR_MASK);
-		
+		wmb();
 		if (fsl_readl(&dr_regs->endpointprime) & bitmask)
 			return;
 
