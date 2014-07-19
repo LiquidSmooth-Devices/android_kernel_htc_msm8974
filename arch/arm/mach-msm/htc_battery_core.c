@@ -29,6 +29,11 @@
 #include <mach/devices_cmdline.h>
 #include <mach/devices_dtb.h>
 #include <linux/qpnp/qpnp-charger.h>
+#ifdef CONFIG_BLX
+#include <linux/blx.h>
+
+int soc_level, soc_flag;
+#endif
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_WAKE_GESTURES
 #include <linux/synaptics_i2c_rmi.h>
@@ -1051,6 +1056,10 @@ int htc_battery_core_update_changed(void)
 	int is_send_wireless_charger_uevent = 0;
 	static int batt_temp_over_68c_count = 0;
 
+#ifdef CONFIG_BLX
+	int rc;
+#endif
+
 	if (battery_register) {
 		BATT_ERR("No battery driver exists.");
 		return -1;
@@ -1167,6 +1176,22 @@ int htc_battery_core_update_changed(void)
 	battery_core_info.rep.over_vchg = new_batt_info_rep.over_vchg;
 	battery_core_info.rep.temp_fault = new_batt_info_rep.temp_fault;
 	battery_core_info.rep.batt_state = new_batt_info_rep.batt_state;
+#endif
+
+#ifdef CONFIG_BLX
+	soc_level = battery_core_info.rep.level;
+
+	if ((soc_level >= get_charginglimit()) && (soc_level != 100)) {
+			htc_battery_charger_disable();
+			soc_flag = 1;
+	} else if ((soc_level < get_charginglimit()) && (soc_flag)) {
+		rc = battery_core_info.func.func_charger_control(ENABLE_CHARGER);
+		if (rc) {
+			BATT_ERR("charger control failed!");
+			return -1;
+		}
+		soc_flag = 0;
+	}
 #endif
 
 	if (battery_core_info.rep.charging_source == CHARGER_BATTERY)
