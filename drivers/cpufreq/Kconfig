@@ -192,6 +192,14 @@ config CPU_FREQ_DEFAULT_GOV_INTELLIDEMAND
 	  loading your cpufreq low-level hardware driver.
 
 endchoice
+	  
+config CPU_FREQ_GOV_HYPER
+	tristate "'hyper' cpufreq governor"
+	depends on CPU_FREQ
+	---help---
+	  'hyper' - A tweaked "ondemand" based smart and smooth optimized governor!
+
+	   If in doubt, say N.
 
 config CPU_FREQ_GOV_SMARTMAX
 	tristate "'smartmax' cpufreq policy governor"
