@@ -186,18 +186,12 @@ static int nfs_idmap_init_keyring(void)
 	if (ret < 0)
 		goto failed_put_key;
 
-	ret = register_key_type(&key_type_id_resolver_legacy);
-	if (ret < 0)
-		goto failed_reg_legacy;
-
 	set_bit(KEY_FLAG_ROOT_CAN_CLEAR, &keyring->flags);
 	cred->thread_keyring = keyring;
 	cred->jit_keyring = KEY_REQKEY_DEFL_THREAD_KEYRING;
 	id_resolver_cache = cred;
 	return 0;
 
-failed_reg_legacy:
-	unregister_key_type(&key_type_id_resolver);
 failed_put_key:
 	key_put(keyring);
 failed_put_cred:
@@ -209,7 +203,6 @@ static void nfs_idmap_quit_keyring(void)
 {
 	key_revoke(id_resolver_cache->thread_keyring);
 	unregister_key_type(&key_type_id_resolver);
-	unregister_key_type(&key_type_id_resolver_legacy);
 	put_cred(id_resolver_cache);
 }
 
@@ -363,7 +356,7 @@ static const struct rpc_pipe_ops idmap_upcall_ops = {
 };
 
 static struct key_type key_type_id_resolver_legacy = {
-	.name		= "id_legacy",
+	.name		= "id_resolver",
 	.instantiate	= user_instantiate,
 	.match		= user_match,
 	.revoke		= user_revoke,
@@ -629,7 +622,6 @@ static int nfs_idmap_legacy_upcall(struct key_construction *cons,
 	if (ret < 0)
 		goto out2;
 
-	BUG_ON(idmap->idmap_key_cons != NULL);
 	idmap->idmap_key_cons = cons;
 
 	ret = rpc_queue_upcall(idmap->idmap_pipe, msg);
@@ -643,7 +635,8 @@ out2:
 out1:
 	kfree(msg);
 out0:
-	complete_request_key(cons, ret);
+	key_revoke(cons->key);
+	key_revoke(cons->authkey);
 	return ret;
 }
 
@@ -677,17 +670,10 @@ idmap_pipe_downcall(struct file *filp, const char __user *src, size_t mlen)
 {
 	struct rpc_inode *rpci = RPC_I(filp->f_path.dentry->d_inode);
 	struct idmap *idmap = (struct idmap *)rpci->private;
-	struct key_construction *cons;
+	struct key_construction *cons = idmap->idmap_key_cons;
 	struct idmap_msg im;
 	size_t namelen_in;
 	int ret;
-
-	/* If instantiation is successful, anyone waiting for key construction
-	 * will have been woken up and someone else may now have used
-	 * idmap_key_cons - so after this point we may no longer touch it.
-	 */
-	cons = ACCESS_ONCE(idmap->idmap_key_cons);
-	idmap->idmap_key_cons = NULL;
 
 	if (mlen != sizeof(im)) {
 		ret = -ENOSPC;
@@ -701,7 +687,7 @@ idmap_pipe_downcall(struct file *filp, const char __user *src, size_t mlen)
 
 	if (!(im.im_status & IDMAP_STATUS_SUCCESS)) {
 		ret = mlen;
-		complete_request_key(cons, -ENOKEY);
+		complete_request_key(idmap->idmap_key_cons, -ENOKEY);
 		goto out_incomplete;
 	}
 
@@ -718,7 +704,7 @@ idmap_pipe_downcall(struct file *filp, const char __user *src, size_t mlen)
 	}
 
 out:
-	complete_request_key(cons, ret);
+	complete_request_key(idmap->idmap_key_cons, ret);
 out_incomplete:
 	return ret;
 }

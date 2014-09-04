@@ -526,14 +526,6 @@ void ieee80211_stop_mesh(struct ieee80211_sub_if_data *sdata)
 
 	del_timer_sync(&sdata->u.mesh.housekeeping_timer);
 	del_timer_sync(&sdata->u.mesh.mesh_path_root_timer);
-	del_timer_sync(&sdata->u.mesh.mesh_path_timer);
-	/*
-	 * If the timer fired while we waited for it, it will have
-	 * requeued the work. Now the work will be running again
-	 * but will not rearm the timer again because it checks
-	 * whether the interface is running, which, at this point,
-	 * it no longer is.
-	 */
 	cancel_work_sync(&sdata->work);
 
 	local->fif_other_bss--;

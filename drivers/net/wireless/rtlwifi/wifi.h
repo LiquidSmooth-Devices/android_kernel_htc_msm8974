@@ -1508,7 +1508,6 @@ struct rtl_locks {
 	spinlock_t rf_ps_lock;
 	spinlock_t rf_lock;
 	spinlock_t waitq_lock;
-	spinlock_t usb_lock;
 
 	
 	spinlock_t cck_and_rw_pagea_lock;

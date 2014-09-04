@@ -39,8 +39,8 @@ int __init omap_init_opp_table(struct omap_opp_def *opp_def,
 		return -EEXIST;
 	omap_table_init = 1;
 
-	/* Lets now register with OPP library */
-	for (i = 0; i < opp_def_size; i++, opp_def++) {
+	
+	for (i = 0; i < opp_def_size; i++) {
 		struct omap_hwmod *oh;
 		struct device *dev;
 
@@ -73,6 +73,7 @@ int __init omap_init_opp_table(struct omap_opp_def *opp_def,
 					__func__, opp_def->freq,
 					opp_def->hwmod_name, i, r);
 		}
+		opp_def++;
 	}
 
 	return 0;

@@ -4132,13 +4132,15 @@ il_bg_watchdog(unsigned long data)
 	if (il_check_stuck_queue(il, il->cmd_queue))
 		return;
 
-	/* monitor and check for other stuck queues */
-	for (cnt = 0; cnt < il->hw_params.max_txq_num; cnt++) {
-		/* skip as we already checked the command queue */
-		if (cnt == il->cmd_queue)
-			continue;
-		if (il_check_stuck_queue(il, cnt))
-			return;
+	
+	if (il_is_any_associated(il)) {
+		for (cnt = 0; cnt < il->hw_params.max_txq_num; cnt++) {
+			
+			if (cnt == il->cmd_queue)
+				continue;
+			if (il_check_stuck_queue(il, cnt))
+				return;
+		}
 	}
 
 	mod_timer(&il->watchdog,

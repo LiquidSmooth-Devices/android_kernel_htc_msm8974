@@ -1989,9 +1989,10 @@ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev)
 			return NETDEV_TX_OK;
 		}
 
-		if (skb->sk)
-			skb_set_owner_w(skb_new, skb->sk);
-		consume_skb(skb);
+		
+		swap(skb_new->sk, skb->sk);
+		swap(skb_new->destructor, skb->destructor);
+		kfree_skb(skb);
 		skb = skb_new;
 	}
 

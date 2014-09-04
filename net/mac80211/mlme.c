@@ -1685,8 +1685,7 @@ ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 	if (status_code != WLAN_STATUS_SUCCESS) {
 		printk(KERN_DEBUG "%s: %pM denied authentication (status %d)\n",
 		       sdata->name, mgmt->sa, status_code);
-		ieee80211_destroy_auth_data(sdata, false);
-		return RX_MGMT_CFG80211_RX_AUTH;
+		goto out;
 	}
 
 	switch (ifmgd->auth_data->algorithm) {
@@ -1708,6 +1707,7 @@ ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 	}
 
 	printk(KERN_DEBUG "%s: authenticated\n", sdata->name);
+ out:
 	ifmgd->auth_data->done = true;
 	ifmgd->auth_data->timeout = jiffies + IEEE80211_AUTH_WAIT_ASSOC;
 	run_again(ifmgd, ifmgd->auth_data->timeout);
@@ -2023,13 +2023,15 @@ ieee80211_rx_mgmt_assoc_resp(struct ieee80211_sub_if_data *sdata,
 		       sdata->name, mgmt->sa, status_code);
 		ieee80211_destroy_assoc_data(sdata, false);
 	} else {
+		printk(KERN_DEBUG "%s: associated\n", sdata->name);
+
 		if (!ieee80211_assoc_success(sdata, *bss, mgmt, len)) {
-			/* oops -- internal error -- send timeout for now */
-			ieee80211_destroy_assoc_data(sdata, false);
+			
+			ieee80211_destroy_assoc_data(sdata, true);
+			sta_info_destroy_addr(sdata, mgmt->bssid);
 			cfg80211_put_bss(*bss);
 			return RX_MGMT_CFG80211_ASSOC_TIMEOUT;
 		}
-		printk(KERN_DEBUG "%s: associated\n", sdata->name);
 
 		ieee80211_destroy_assoc_data(sdata, true);
 	}

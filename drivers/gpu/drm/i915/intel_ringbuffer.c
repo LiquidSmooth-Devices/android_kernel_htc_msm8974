@@ -182,6 +182,8 @@ static int init_ring_common(struct intel_ring_buffer *ring)
 	I915_WRITE_HEAD(ring, 0);
 	ring->write_tail(ring, 0);
 
+	
+	I915_WRITE_START(ring, obj->gtt_offset);
 	head = I915_READ_HEAD(ring) & HEAD_ADDR;
 
 	
@@ -207,11 +209,6 @@ static int init_ring_common(struct intel_ring_buffer *ring)
 		}
 	}
 
-	/* Initialize the ring. This must happen _after_ we've cleared the ring
-	 * registers with the above sequence (the readback of the HEAD registers
-	 * also enforces ordering), otherwise the hw might lose the new ring
-	 * register values. */
-	I915_WRITE_START(ring, obj->gtt_offset);
 	I915_WRITE_CTL(ring,
 			((ring->size - PAGE_SIZE) & RING_NR_PAGES)
 			| RING_VALID);

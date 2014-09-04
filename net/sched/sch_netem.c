@@ -245,22 +245,29 @@ static psched_time_t packet_len_2_sched_time(unsigned int len, struct netem_sche
 	return PSCHED_NS2TICKS(ticks);
 }
 
-static void tfifo_enqueue(struct sk_buff *nskb, struct Qdisc *sch)
+static int tfifo_enqueue(struct sk_buff *nskb, struct Qdisc *sch)
 {
 	struct sk_buff_head *list = &sch->q;
 	psched_time_t tnext = netem_skb_cb(nskb)->time_to_send;
-	struct sk_buff *skb = skb_peek_tail(list);
+	struct sk_buff *skb;
 
-	/* Optimize for add at tail */
-	if (likely(!skb || tnext >= netem_skb_cb(skb)->time_to_send))
-		return __skb_queue_tail(list, nskb);
+	if (likely(skb_queue_len(list) < sch->limit)) {
+		skb = skb_peek_tail(list);
+		
+		if (likely(!skb || tnext >= netem_skb_cb(skb)->time_to_send))
+			return qdisc_enqueue_tail(nskb, sch);
 
-	skb_queue_reverse_walk(list, skb) {
-		if (tnext >= netem_skb_cb(skb)->time_to_send)
-			break;
+		skb_queue_reverse_walk(list, skb) {
+			if (tnext >= netem_skb_cb(skb)->time_to_send)
+				break;
+		}
+
+		__skb_queue_after(list, skb, nskb);
+		sch->qstats.backlog += qdisc_pkt_len(nskb);
+		return NET_XMIT_SUCCESS;
 	}
 
-	__skb_queue_after(list, skb, nskb);
+	return qdisc_reshape_fail(nskb, sch);
 }
 
 static int netem_enqueue(struct sk_buff *skb, struct Qdisc *sch)
@@ -269,6 +276,7 @@ static int netem_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 	
 	struct netem_skb_cb *cb;
 	struct sk_buff *skb2;
+	int ret;
 	int count = 1;
 
 	
@@ -305,11 +313,6 @@ static int netem_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 		skb->data[net_random() % skb_headlen(skb)] ^= 1<<(net_random() % 8);
 	}
 
-	if (unlikely(skb_queue_len(&sch->q) >= sch->limit))
-		return qdisc_reshape_fail(skb, sch);
-
-	sch->qstats.backlog += qdisc_pkt_len(skb);
-
 	cb = netem_skb_cb(skb);
 	if (q->gap == 0 ||		
 	    q->counter < q->gap - 1 ||	
@@ -335,13 +338,22 @@ static int netem_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 
 		cb->time_to_send = now + delay;
 		++q->counter;
-		tfifo_enqueue(skb, sch);
+		ret = tfifo_enqueue(skb, sch);
 	} else {
 		cb->time_to_send = psched_get_time();
 		q->counter = 0;
 
 		__skb_queue_head(&sch->q, skb);
+		sch->qstats.backlog += qdisc_pkt_len(skb);
 		sch->qstats.requeues++;
+		ret = NET_XMIT_SUCCESS;
+	}
+
+	if (ret != NET_XMIT_SUCCESS) {
+		if (net_xmit_drop_count(ret)) {
+			sch->qstats.drops++;
+			return ret;
+		}
 	}
 
 	return NET_XMIT_SUCCESS;

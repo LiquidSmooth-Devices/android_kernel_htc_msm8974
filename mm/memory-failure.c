@@ -263,27 +263,14 @@ static void add_to_kill(struct task_struct *tsk, struct page *p,
 	list_add_tail(&tk->nd, to_kill);
 }
 
-/*
- * Kill the processes that have been collected earlier.
- *
- * Only do anything when DOIT is set, otherwise just free the list
- * (this is used for clean pages which do not need killing)
- * Also when FAIL is set do a force kill because something went
- * wrong earlier.
- */
-static void kill_procs(struct list_head *to_kill, int forcekill, int trapno,
+static void kill_procs(struct list_head *to_kill, int doit, int trapno,
 			  int fail, struct page *page, unsigned long pfn,
 			  int flags)
 {
 	struct to_kill *tk, *next;
 
 	list_for_each_entry_safe (tk, next, to_kill, nd) {
-		if (forcekill) {
-			/*
-			 * In case something went wrong with munmapping
-			 * make sure the process doesn't catch the
-			 * signal and then access the memory. Just kill it.
-			 */
+		if (doit) {
 			if (fail || tk->addr_valid == 0) {
 				printk(KERN_ERR
 		"MCE %#lx: forcibly killing %s:%d because of failure to unmap corrupted page\n",
@@ -604,7 +591,7 @@ static int hwpoison_user_mappings(struct page *p, unsigned long pfn,
 	struct address_space *mapping;
 	LIST_HEAD(tokill);
 	int ret;
-	int kill = 1, forcekill;
+	int kill = 1;
 	struct page *hpage = compound_head(p);
 	struct page *ppage;
 
@@ -624,7 +611,7 @@ static int hwpoison_user_mappings(struct page *p, unsigned long pfn,
 	}
 
 	mapping = page_mapping(hpage);
-	if (!(flags & MF_MUST_KILL) && !PageDirty(hpage) && mapping &&
+	if (!PageDirty(hpage) && mapping &&
 	    mapping_cap_writeback_dirty(mapping)) {
 		if (page_mkclean(hpage)) {
 			SetPageDirty(hpage);
@@ -667,18 +654,7 @@ static int hwpoison_user_mappings(struct page *p, unsigned long pfn,
 	if (hpage != ppage)
 		unlock_page(ppage);
 
-	/*
-	 * Now that the dirty bit has been propagated to the
-	 * struct page and all unmaps done we can decide if
-	 * killing is needed or not.  Only kill when the page
-	 * was dirty or the process is not restartable,
-	 * otherwise the tokill list is merely
-	 * freed.  When there was a problem unmapping earlier
-	 * use a more force-full uncatchable kill to prevent
-	 * any accesses to the poisoned memory.
-	 */
-	forcekill = PageDirty(ppage) || (flags & MF_MUST_KILL);
-	kill_procs(&tokill, forcekill, trapno,
+	kill_procs(&tokill, !!PageDirty(ppage), trapno,
 		      ret != SWAP_SUCCESS, p, pfn, flags);
 
 	return ret;
@@ -1008,8 +984,8 @@ static int soft_offline_huge_page(struct page *page, int flags)
 	
 
 	list_add(&hpage->lru, &pagelist);
-	ret = migrate_huge_pages(&pagelist, new_page, MPOL_MF_MOVE_ALL, false,
-				MIGRATE_SYNC);
+	ret = migrate_huge_pages(&pagelist, new_page, MPOL_MF_MOVE_ALL, 0,
+				true);
 	if (ret) {
 		struct page *page1, *page2;
 		list_for_each_entry_safe(page1, page2, &pagelist, lru)
@@ -1087,7 +1063,7 @@ int soft_offline_page(struct page *page, int flags)
 					    page_is_file_cache(page));
 		list_add(&page->lru, &pagelist);
 		ret = migrate_pages(&pagelist, new_page, MPOL_MF_MOVE_ALL,
-							false, MIGRATE_SYNC);
+							0, MIGRATE_SYNC);
 		if (ret) {
 			putback_lru_pages(&pagelist);
 			pr_info("soft offline: %#lx: migration failed %d, type %lx\n",
