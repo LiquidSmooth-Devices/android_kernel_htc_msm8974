@@ -341,17 +341,6 @@ static int svc_uses_rpcbind(struct svc_serv *serv)
 	return 0;
 }
 
-int svc_bind(struct svc_serv *serv, struct net *net)
-{
-	if (!svc_uses_rpcbind(serv))
-		return 0;
-	return svc_rpcb_setup(serv, net);
-}
-EXPORT_SYMBOL_GPL(svc_bind);
-
-/*
- * Create an RPC service
- */
 static struct svc_serv *
 __svc_create(struct svc_program *prog, unsigned int bufsize, int npools,
 	     void (*shutdown)(struct svc_serv *serv, struct net *net))
@@ -413,8 +402,15 @@ __svc_create(struct svc_program *prog, unsigned int bufsize, int npools,
 		spin_lock_init(&pool->sp_lock);
 	}
 
-	if (svc_uses_rpcbind(serv) && (!serv->sv_shutdown))
-		serv->sv_shutdown = svc_rpcb_cleanup;
+	if (svc_uses_rpcbind(serv)) {
+		if (svc_rpcb_setup(serv, current->nsproxy->net_ns) < 0) {
+			kfree(serv->sv_pools);
+			kfree(serv);
+			return NULL;
+		}
+		if (!serv->sv_shutdown)
+			serv->sv_shutdown = svc_rpcb_cleanup;
+	}
 
 	return serv;
 }
@@ -458,6 +454,8 @@ EXPORT_SYMBOL_GPL(svc_shutdown_net);
 void
 svc_destroy(struct svc_serv *serv)
 {
+	struct net *net = current->nsproxy->net_ns;
+
 	dprintk("svc: svc_destroy(%s, %d)\n",
 				serv->sv_program->pg_name,
 				serv->sv_nrthreads);
@@ -472,10 +470,8 @@ svc_destroy(struct svc_serv *serv)
 
 	del_timer_sync(&serv->sv_temptimer);
 
-	/*
-	 * The last user is gone and thus all sockets have to be destroyed to
-	 * the point. Check this.
-	 */
+	svc_shutdown_net(serv, net);
+
 	BUG_ON(!list_empty(&serv->sv_permsocks));
 	BUG_ON(!list_empty(&serv->sv_tempsocks));
 

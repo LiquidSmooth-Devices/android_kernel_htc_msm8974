@@ -229,7 +229,7 @@ static int pre_map_gar_callback(struct apei_exec_context *ctx,
 	u8 ins = entry->instruction;
 
 	if (ctx->ins_table[ins].flags & APEI_EXEC_INS_ACCESS_REGISTER)
-		return apei_map_generic_address(&entry->register_region);
+		return acpi_os_map_generic_address(&entry->register_region);
 
 	return 0;
 }
@@ -258,7 +258,7 @@ static int post_unmap_gar_callback(struct apei_exec_context *ctx,
 	u8 ins = entry->instruction;
 
 	if (ctx->ins_table[ins].flags & APEI_EXEC_INS_ACCESS_REGISTER)
-		apei_unmap_generic_address(&entry->register_region);
+		acpi_os_unmap_generic_address(&entry->register_region);
 
 	return 0;
 }
@@ -568,20 +568,6 @@ static int apei_check_gar(struct acpi_generic_address *reg, u64 *paddr,
 	return 0;
 }
 
-int apei_map_generic_address(struct acpi_generic_address *reg)
-{
-	int rc;
-	u32 access_bit_width;
-	u64 address;
-
-	rc = apei_check_gar(reg, &address, &access_bit_width);
-	if (rc)
-		return rc;
-	return acpi_os_map_generic_address(reg);
-}
-EXPORT_SYMBOL_GPL(apei_map_generic_address);
-
-/* read GAR in interrupt (including NMI) or process context */
 int apei_read(u64 *val, struct acpi_generic_address *reg)
 {
 	int rc;

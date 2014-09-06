@@ -150,10 +150,6 @@ err:
 static int qmi_wwan_cdc_wdm_manage_power(struct usb_interface *intf, int on)
 {
 	struct usbnet *dev = usb_get_intfdata(intf);
-
-	/* can be called while disconnecting */
-	if (!dev)
-		return 0;
 	return qmi_wwan_manage_power(dev, on);
 }
 
@@ -195,6 +191,19 @@ static int qmi_wwan_bind_shared(struct usbnet *dev, struct usb_interface *intf)
 	
 	dev->data[0] = (unsigned long)subdriver;
 
+err:
+	return rv;
+}
+
+static int qmi_wwan_bind_gobi(struct usbnet *dev, struct usb_interface *intf)
+{
+	int rv = -EINVAL;
+
+	
+	if (intf->cur_altsetting->extralen)
+		goto err;
+
+	rv = qmi_wwan_bind_shared(dev, intf);
 err:
 	return rv;
 }
@@ -260,37 +269,18 @@ static const struct driver_info	qmi_wwan_shared = {
 	.manage_power	= qmi_wwan_manage_power,
 };
 
-static const struct driver_info	qmi_wwan_force_int0 = {
-	.description	= "Qualcomm WWAN/QMI device",
+static const struct driver_info	qmi_wwan_gobi = {
+	.description	= "Qualcomm Gobi wwan/QMI device",
 	.flags		= FLAG_WWAN,
-	.bind		= qmi_wwan_bind_shared,
+	.bind		= qmi_wwan_bind_gobi,
 	.unbind		= qmi_wwan_unbind_shared,
 	.manage_power	= qmi_wwan_manage_power,
-	.data		= BIT(0), /* interface whitelist bitmap */
-};
-
-static const struct driver_info	qmi_wwan_force_int1 = {
-	.description	= "Qualcomm WWAN/QMI device",
-	.flags		= FLAG_WWAN,
-	.bind		= qmi_wwan_bind_shared,
-	.unbind		= qmi_wwan_unbind_shared,
-	.manage_power	= qmi_wwan_manage_power,
-	.data		= BIT(1), /* interface whitelist bitmap */
-};
-
-static const struct driver_info	qmi_wwan_force_int3 = {
-	.description	= "Qualcomm WWAN/QMI device",
-	.flags		= FLAG_WWAN,
-	.bind		= qmi_wwan_bind_shared,
-	.unbind		= qmi_wwan_unbind_shared,
-	.manage_power	= qmi_wwan_manage_power,
-	.data		= BIT(3), /* interface whitelist bitmap */
 };
 
 static const struct driver_info	qmi_wwan_force_int4 = {
-	.description	= "Qualcomm WWAN/QMI device",
+	.description	= "Qualcomm Gobi wwan/QMI device",
 	.flags		= FLAG_WWAN,
-	.bind		= qmi_wwan_bind_shared,
+	.bind		= qmi_wwan_bind_gobi,
 	.unbind		= qmi_wwan_unbind_shared,
 	.manage_power	= qmi_wwan_manage_power,
 	.data		= BIT(4), 
@@ -299,23 +289,16 @@ static const struct driver_info	qmi_wwan_force_int4 = {
 static const struct driver_info	qmi_wwan_sierra = {
 	.description	= "Sierra Wireless wwan/QMI device",
 	.flags		= FLAG_WWAN,
-	.bind		= qmi_wwan_bind_shared,
+	.bind		= qmi_wwan_bind_gobi,
 	.unbind		= qmi_wwan_unbind_shared,
 	.manage_power	= qmi_wwan_manage_power,
 	.data		= BIT(8) | BIT(19), 
 };
 
 #define HUAWEI_VENDOR_ID	0x12D1
-
-/* Gobi 1000 QMI/wwan interface number is 3 according to qcserial */
-#define QMI_GOBI1K_DEVICE(vend, prod) \
-	USB_DEVICE(vend, prod), \
-	.driver_info = (unsigned long)&qmi_wwan_force_int3
-
-/* Gobi 2000 and Gobi 3000 QMI/wwan interface number is 0 according to qcserial */
 #define QMI_GOBI_DEVICE(vend, prod) \
 	USB_DEVICE(vend, prod), \
-	.driver_info = (unsigned long)&qmi_wwan_force_int0
+	.driver_info = (unsigned long)&qmi_wwan_gobi
 
 static const struct usb_device_id products[] = {
 	{	
@@ -352,16 +335,7 @@ static const struct usb_device_id products[] = {
 		.bInterfaceProtocol = 0xff,
 		.driver_info        = (unsigned long)&qmi_wwan_force_int4,
 	},
-	{	/* ZTE (Vodafone) K3520-Z */
-		.match_flags	    = USB_DEVICE_ID_MATCH_DEVICE | USB_DEVICE_ID_MATCH_INT_INFO,
-		.idVendor           = 0x19d2,
-		.idProduct          = 0x0055,
-		.bInterfaceClass    = 0xff,
-		.bInterfaceSubClass = 0xff,
-		.bInterfaceProtocol = 0xff,
-		.driver_info        = (unsigned long)&qmi_wwan_force_int1,
-	},
-	{	/* ZTE (Vodafone) K3565-Z */
+	{	
 		.match_flags	    = USB_DEVICE_ID_MATCH_DEVICE | USB_DEVICE_ID_MATCH_INT_INFO,
 		.idVendor           = 0x19d2,
 		.idProduct          = 0x0063,
@@ -406,48 +380,44 @@ static const struct usb_device_id products[] = {
 		.bInterfaceProtocol = 0xff,
 		.driver_info        = (unsigned long)&qmi_wwan_sierra,
 	},
-
-	/* Gobi 1000 devices */
-	{QMI_GOBI1K_DEVICE(0x05c6, 0x9212)},	/* Acer Gobi Modem Device */
-	{QMI_GOBI1K_DEVICE(0x03f0, 0x1f1d)},	/* HP un2400 Gobi Modem Device */
-	{QMI_GOBI1K_DEVICE(0x03f0, 0x371d)},	/* HP un2430 Mobile Broadband Module */
-	{QMI_GOBI1K_DEVICE(0x04da, 0x250d)},	/* Panasonic Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x413c, 0x8172)},	/* Dell Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x1410, 0xa001)},	/* Novatel Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x0b05, 0x1776)},	/* Asus Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x19d2, 0xfff3)},	/* ONDA Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x05c6, 0x9001)},	/* Generic Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x05c6, 0x9002)},	/* Generic Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x05c6, 0x9202)},	/* Generic Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x05c6, 0x9203)},	/* Generic Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x05c6, 0x9222)},	/* Generic Gobi Modem device */
-	{QMI_GOBI1K_DEVICE(0x05c6, 0x9009)},	/* Generic Gobi Modem device */
-
-	/* Gobi 2000 and 3000 devices */
-	{QMI_GOBI_DEVICE(0x413c, 0x8186)},	/* Dell Gobi 2000 Modem device (N0218, VU936) */
-	{QMI_GOBI_DEVICE(0x05c6, 0x920b)},	/* Generic Gobi 2000 Modem device */
-	{QMI_GOBI_DEVICE(0x05c6, 0x9225)},	/* Sony Gobi 2000 Modem device (N0279, VU730) */
-	{QMI_GOBI_DEVICE(0x05c6, 0x9245)},	/* Samsung Gobi 2000 Modem device (VL176) */
-	{QMI_GOBI_DEVICE(0x03f0, 0x251d)},	/* HP Gobi 2000 Modem device (VP412) */
-	{QMI_GOBI_DEVICE(0x05c6, 0x9215)},	/* Acer Gobi 2000 Modem device (VP413) */
-	{QMI_GOBI_DEVICE(0x05c6, 0x9265)},	/* Asus Gobi 2000 Modem device (VR305) */
-	{QMI_GOBI_DEVICE(0x05c6, 0x9235)},	/* Top Global Gobi 2000 Modem device (VR306) */
-	{QMI_GOBI_DEVICE(0x05c6, 0x9275)},	/* iRex Technologies Gobi 2000 Modem device (VR307) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9001)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9002)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9003)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9004)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9005)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9006)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9007)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9008)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9009)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x900a)},	/* Sierra Wireless Gobi 2000 Modem device (VT773) */
-	{QMI_GOBI_DEVICE(0x1199, 0x9011)},	/* Sierra Wireless Gobi 2000 Modem device (MC8305) */
-	{QMI_GOBI_DEVICE(0x16d8, 0x8002)},	/* CMDTech Gobi 2000 Modem device (VU922) */
-	{QMI_GOBI_DEVICE(0x05c6, 0x9205)},	/* Gobi 2000 Modem device */
-	{QMI_GOBI_DEVICE(0x1199, 0x9013)},	/* Sierra Wireless Gobi 3000 Modem device (MC8355) */
-	{ }					/* END */
+	{QMI_GOBI_DEVICE(0x05c6, 0x9212)},	
+	{QMI_GOBI_DEVICE(0x03f0, 0x1f1d)},	
+	{QMI_GOBI_DEVICE(0x03f0, 0x371d)},	
+	{QMI_GOBI_DEVICE(0x04da, 0x250d)},	
+	{QMI_GOBI_DEVICE(0x413c, 0x8172)},	
+	{QMI_GOBI_DEVICE(0x1410, 0xa001)},	
+	{QMI_GOBI_DEVICE(0x0b05, 0x1776)},	
+	{QMI_GOBI_DEVICE(0x19d2, 0xfff3)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9001)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9002)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9202)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9203)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9222)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9009)},	
+	{QMI_GOBI_DEVICE(0x413c, 0x8186)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x920b)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9225)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9245)},	
+	{QMI_GOBI_DEVICE(0x03f0, 0x251d)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9215)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9265)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9235)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9275)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9001)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9002)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9003)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9004)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9005)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9006)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9007)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9008)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9009)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x900a)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9011)},	
+	{QMI_GOBI_DEVICE(0x16d8, 0x8002)},	
+	{QMI_GOBI_DEVICE(0x05c6, 0x9205)},	
+	{QMI_GOBI_DEVICE(0x1199, 0x9013)},	
+	{ }					
 };
 MODULE_DEVICE_TABLE(usb, products);
 

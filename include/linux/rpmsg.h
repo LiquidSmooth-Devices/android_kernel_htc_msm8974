@@ -38,8 +38,6 @@
 #include <linux/types.h>
 #include <linux/device.h>
 #include <linux/mod_devicetable.h>
-#include <linux/kref.h>
-#include <linux/mutex.h>
 
 #define VIRTIO_RPMSG_F_NS	0 
 
@@ -79,34 +77,9 @@ struct rpmsg_channel {
 
 typedef void (*rpmsg_rx_cb_t)(struct rpmsg_channel *, void *, int, void *, u32);
 
-/**
- * struct rpmsg_endpoint - binds a local rpmsg address to its user
- * @rpdev: rpmsg channel device
- * @refcount: when this drops to zero, the ept is deallocated
- * @cb: rx callback handler
- * @cb_lock: must be taken before accessing/changing @cb
- * @addr: local rpmsg address
- * @priv: private data for the driver's use
- *
- * In essence, an rpmsg endpoint represents a listener on the rpmsg bus, as
- * it binds an rpmsg address with an rx callback handler.
- *
- * Simple rpmsg drivers shouldn't use this struct directly, because
- * things just work: every rpmsg driver provides an rx callback upon
- * registering to the bus, and that callback is then bound to its rpmsg
- * address when the driver is probed. When relevant inbound messages arrive
- * (i.e. messages which their dst address equals to the src address of
- * the rpmsg channel), the driver's handler is invoked to process it.
- *
- * More complicated drivers though, that do need to allocate additional rpmsg
- * addresses, and bind them to different rx callbacks, must explicitly
- * create additional endpoints by themselves (see rpmsg_create_ept()).
- */
 struct rpmsg_endpoint {
 	struct rpmsg_channel *rpdev;
-	struct kref refcount;
 	rpmsg_rx_cb_t cb;
-	struct mutex cb_lock;
 	u32 addr;
 	void *priv;
 };

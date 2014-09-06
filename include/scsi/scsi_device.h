@@ -118,18 +118,16 @@ struct scsi_device {
 	unsigned start_stop_pwr_cond:1;	
 	unsigned no_uld_attach:1; 
 	unsigned select_no_atn:1;
-	unsigned fix_capacity:1;	/* READ_CAPACITY is too high by 1 */
-	unsigned guess_capacity:1;	/* READ_CAPACITY might be too high by 1 */
-	unsigned retry_hwerror:1;	/* Retry HARDWARE_ERROR */
-	unsigned last_sector_bug:1;	/* do not use multisector accesses on
-					   SD_LAST_BUGGY_SECTORS */
-	unsigned no_read_disc_info:1;	/* Avoid READ_DISC_INFO cmds */
-	unsigned no_read_capacity_16:1; /* Avoid READ_CAPACITY_16 cmds */
-	unsigned try_rc_10_first:1;	/* Try READ_CAPACACITY_10 first */
-	unsigned is_visible:1;	/* is the device visible in sysfs */
+	unsigned fix_capacity:1;	
+	unsigned guess_capacity:1;	
+	unsigned retry_hwerror:1;	
+	unsigned last_sector_bug:1;	
+	unsigned no_read_disc_info:1;	
+	unsigned no_read_capacity_16:1; 
+	unsigned is_visible:1;	
 
-	DECLARE_BITMAP(supported_events, SDEV_EVT_MAXBITS); /* supported events */
-	struct list_head event_list;	/* asserted events */
+	DECLARE_BITMAP(supported_events, SDEV_EVT_MAXBITS); 
+	struct list_head event_list;	
 	struct work_struct event_work;
 
 	unsigned int device_blocked;	

@@ -88,19 +88,9 @@ out:
 
 static void check_and_cede_processor(void)
 {
-	/*
-	 * Ensure our interrupt state is properly tracked,
-	 * also checks if no interrupt has occurred while we
-	 * were soft-disabled
-	 */
-	if (prep_irq_for_idle()) {
+	hard_irq_disable();
+	if (get_paca()->irq_happened == 0)
 		cede_processor();
-#ifdef CONFIG_TRACE_IRQFLAGS
-		/* Ensure that H_CEDE returns with IRQs on */
-		if (WARN_ON(!(mfmsr() & MSR_EE)))
-			__hard_irq_enable();
-#endif
-	}
 }
 
 static int dedicated_cede_loop(struct cpuidle_device *dev,

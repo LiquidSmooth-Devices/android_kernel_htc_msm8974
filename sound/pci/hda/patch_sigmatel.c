@@ -4177,7 +4177,7 @@ static int stac92xx_init(struct hda_codec *codec)
 					 AC_PINCTL_IN_EN);
 	for (i = 0; i < spec->num_pwrs; i++)  {
 		hda_nid_t nid = spec->pwr_nids[i];
-		unsigned int pinctl, def_conf;
+		int pinctl, def_conf;
 
 		
 		
@@ -4198,9 +4198,7 @@ static int stac92xx_init(struct hda_codec *codec)
 		}
 		def_conf = snd_hda_codec_get_pincfg(codec, nid);
 		def_conf = get_defcfg_connect(def_conf);
-		/* skip any ports that don't have jacks since presence
- 		 * detection is useless */
-		if (def_conf != AC_JACK_PORT_COMPLEX ||
+		if (def_conf != AC_JACK_PORT_NONE &&
 		    !is_jack_detectable(codec, nid)) {
 			stac_toggle_power_map(codec, nid, 1);
 			continue;

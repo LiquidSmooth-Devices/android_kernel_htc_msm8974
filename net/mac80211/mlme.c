@@ -139,7 +139,7 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 	u32 changed = 0;
 	int hti_cfreq;
 	u16 ht_opmode;
-	bool enable_ht = true, queues_stopped = false;
+	bool enable_ht = true;
 	enum nl80211_channel_type prev_chantype;
 	enum nl80211_channel_type rx_channel_type = NL80211_CHAN_NO_HT;
 	enum nl80211_channel_type tx_channel_type;
@@ -197,7 +197,6 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 	if (beacon_htcap_ie && (prev_chantype != rx_channel_type)) {
 		ieee80211_stop_queues_by_reason(&sdata->local->hw,
 				IEEE80211_QUEUE_STOP_REASON_CHTYPE_CHANGE);
-		queues_stopped = true;
 
 		
 		synchronize_net();
@@ -216,11 +215,11 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 						 IEEE80211_RC_HT_CHANGED,
 						 tx_channel_type);
 		rcu_read_unlock();
-	}
 
-	if (queues_stopped)
-		ieee80211_wake_queues_by_reason(&sdata->local->hw,
-			IEEE80211_QUEUE_STOP_REASON_CHTYPE_CHANGE);
+		if (beacon_htcap_ie)
+			ieee80211_wake_queues_by_reason(&sdata->local->hw,
+				IEEE80211_QUEUE_STOP_REASON_CHTYPE_CHANGE);
+	}
 
 	ht_opmode = le16_to_cpu(hti->operation_mode);
 
@@ -1299,6 +1298,7 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_local *local = sdata->local;
 	struct sta_info *sta;
 	u32 changed = 0;
+	u8 bssid[ETH_ALEN];
 
 	ASSERT_MGD_MTX(ifmgd);
 
@@ -1308,7 +1308,10 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	if (WARN_ON(!ifmgd->associated))
 		return;
 
+	memcpy(bssid, ifmgd->associated->bssid, ETH_ALEN);
+
 	ifmgd->associated = NULL;
+	memset(ifmgd->bssid, 0, ETH_ALEN);
 
 	smp_mb();
 
@@ -1317,7 +1320,7 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	netif_carrier_off(sdata->dev);
 
 	mutex_lock(&local->sta_mtx);
-	sta = sta_info_get(sdata, ifmgd->bssid);
+	sta = sta_info_get(sdata, bssid);
 	if (sta) {
 		set_sta_flag(sta, WLAN_STA_BLOCK_BA);
 		ieee80211_sta_tear_down_BA_sessions(sta, tx);
@@ -1326,17 +1329,14 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 
 	
 	if (tx || frame_buf)
-		ieee80211_send_deauth_disassoc(sdata, ifmgd->bssid, stype,
-					       reason, tx, frame_buf);
+		ieee80211_send_deauth_disassoc(sdata, bssid, stype, reason,
+					       tx, frame_buf);
 
 	
 	if (tx)
 		drv_flush(local, false);
 
-	/* clear bssid only after building the needed mgmt frames */
-	memset(ifmgd->bssid, 0, ETH_ALEN);
-
-	/* remove AP and TDLS peers */
+	
 	sta_info_flush(local, sdata);
 
 	
