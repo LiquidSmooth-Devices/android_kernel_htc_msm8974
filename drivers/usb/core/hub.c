@@ -63,12 +63,12 @@ EXPORT_SYMBOL(HostTest);
 #endif
 
 struct usb_hub {
-	struct device		*intfdev;	
+	struct device		*intfdev;
 	struct usb_device	*hdev;
 	struct kref		kref;
 	struct urb		*urb;		
 
-	
+
 	char			(*buffer)[8];
 	union {
 		struct usb_hub_status	hub;
@@ -85,14 +85,14 @@ struct usb_hub {
 	unsigned long		busy_bits[1];	
 	unsigned long		removed_bits[1]; 
 	unsigned long		wakeup_bits[1];	
-#if USB_MAXCHILDREN > 31 
+#if USB_MAXCHILDREN > 31
 #error event_bits[] is too short!
 #endif
 
 	struct usb_hub_descriptor *descriptor;	
 	struct usb_tt		tt;		
 
-	unsigned		mA_per_port;	
+	unsigned		mA_per_port;
 
 	unsigned		limited_power:1;
 	unsigned		quiescing:1;
@@ -252,16 +252,16 @@ static void led_work (struct work_struct *work)
 	for (i = 0; i < hub->descriptor->bNbrPorts; i++) {
 		unsigned	selector, mode;
 
-		
+	
 
 		switch (hub->indicator[i]) {
-		
+	
 		case INDICATOR_CYCLE:
 			cursor = i;
 			selector = HUB_LED_AUTO;
 			mode = INDICATOR_AUTO;
 			break;
-		
+
 		case INDICATOR_GREEN_BLINK:
 			selector = HUB_LED_GREEN;
 			mode = INDICATOR_GREEN_BLINK_OFF;
@@ -270,7 +270,7 @@ static void led_work (struct work_struct *work)
 			selector = HUB_LED_OFF;
 			mode = INDICATOR_GREEN_BLINK;
 			break;
-		
+
 		case INDICATOR_AMBER_BLINK:
 			selector = HUB_LED_AMBER;
 			mode = INDICATOR_AMBER_BLINK_OFF;
@@ -279,7 +279,7 @@ static void led_work (struct work_struct *work)
 			selector = HUB_LED_OFF;
 			mode = INDICATOR_AMBER_BLINK;
 			break;
-		
+
 		case INDICATOR_ALT_BLINK:
 			selector = HUB_LED_GREEN;
 			mode = INDICATOR_ALT_BLINK_OFF;
@@ -1795,11 +1795,13 @@ static unsigned hub_is_wusb(struct usb_hub *hub)
 static int hub_port_reset(struct usb_hub *hub, int port1,
 			struct usb_device *udev, unsigned int delay, bool warm);
 
-static bool hub_port_inactive(struct usb_hub *hub, u16 portstatus)
+static bool hub_port_warm_reset_required(struct usb_hub *hub, u16 portstatus)
 {
 	return hub_is_superspeed(hub->hdev) &&
-		(portstatus & USB_PORT_STAT_LINK_STATE) ==
-		USB_SS_PORT_LS_SS_INACTIVE;
+		(((portstatus & USB_PORT_STAT_LINK_STATE) ==
+		  USB_SS_PORT_LS_SS_INACTIVE) ||
+		 ((portstatus & USB_PORT_STAT_LINK_STATE) ==
+		  USB_SS_PORT_LS_COMP_MOD)) ;
 }
 
 static int hub_port_wait_reset(struct usb_hub *hub, int port1,
@@ -1821,7 +1823,7 @@ static int hub_port_wait_reset(struct usb_hub *hub, int port1,
 			return ret;
 
 		if (!warm) {
-			if (hub_port_inactive(hub, portstatus)) {
+			if (hub_port_warm_reset_required(hub, portstatus)) {
 				int ret;
 
 				if ((portchange & USB_PORT_STAT_C_CONNECTION))
@@ -3375,9 +3377,7 @@ static void hub_events(void)
 						USB_PORT_FEAT_C_PORT_CONFIG_ERROR);
 			}
 
-			if (hub_is_superspeed(hub->hdev) &&
-				(portstatus & USB_PORT_STAT_LINK_STATE)
-					== USB_SS_PORT_LS_SS_INACTIVE) {
+			if (hub_port_warm_reset_required(hub, portstatus)) {
 				dev_dbg(hub_dev, "warm reset port %d\n", i);
 				hub_port_reset(hub, i, NULL,
 						HUB_BH_RESET_TIME, true);
