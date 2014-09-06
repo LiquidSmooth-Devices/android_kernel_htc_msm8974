@@ -2201,7 +2201,7 @@ static void pl330_tasklet(unsigned long data)
 	
 	list_for_each_entry_safe(desc, _dt, &pch->work_list, node)
 		if (desc->status == DONE) {
-			if (pch->cyclic)
+			if (!pch->cyclic)
 				dma_cookie_complete(&desc->txd);
 			list_move_tail(&desc->node, &list);
 		}
