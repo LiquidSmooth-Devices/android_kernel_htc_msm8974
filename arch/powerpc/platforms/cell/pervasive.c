@@ -42,11 +42,13 @@ static void cbe_power_save(void)
 {
 	unsigned long ctrl, thread_switch_control;
 
-	hard_irq_disable();
+	/* Ensure our interrupt state is properly tracked */
+	if (!prep_irq_for_idle())
+		return;
 
 	ctrl = mfspr(SPRN_CTRLF);
 
-	
+	/* Enable DEC and EE interrupt request */
 	thread_switch_control  = mfspr(SPRN_TSC_CELL);
 	thread_switch_control |= TSC_CELL_EE_ENABLE | TSC_CELL_EE_BOOST;
 
@@ -64,10 +66,22 @@ static void cbe_power_save(void)
 	}
 	mtspr(SPRN_TSC_CELL, thread_switch_control);
 
+	/*
+	 * go into low thread priority, medium priority will be
+	 * restored for us after wake-up.
+	 */
 	HMT_low();
 
+	/*
+	 * atomically disable thread execution and runlatch.
+	 * External and Decrementer exceptions are still handled when the
+	 * thread is disabled but now enter in cbe_system_reset_exception()
+	 */
 	ctrl &= ~(CTRL_RUNLATCH | CTRL_TE);
 	mtspr(SPRN_CTRLT, ctrl);
+
+	/* Re-enable interrupts in MSR */
+	__hard_irq_enable();
 }
 
 static int cbe_system_reset_exception(struct pt_regs *regs)
@@ -88,12 +102,12 @@ static int cbe_system_reset_exception(struct pt_regs *regs)
 	case SRR1_WAKETHERM:
 		cbe_thermal_exception(regs);
 		break;
-#endif 
+#endif /* CONFIG_CBE_RAS */
 	default:
-		
+		/* do system reset */
 		return 0;
 	}
-	
+	/* everything handled */
 	return 1;
 }
 
@@ -109,7 +123,7 @@ void __init cbe_pervasive_init(void)
 		if (!regs)
 			continue;
 
-		 
+		 /* Enable Pause(0) control bit */
 		out_be64(&regs->pmcr, in_be64(&regs->pmcr) |
 					    CBE_PMD_PAUSE_ZERO_CONTROL);
 	}
