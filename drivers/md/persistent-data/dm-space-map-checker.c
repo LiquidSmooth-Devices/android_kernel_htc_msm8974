@@ -8,11 +8,13 @@
 
 #include <linux/device-mapper.h>
 #include <linux/export.h>
+#include <linux/vmalloc.h>
 
 #ifdef CONFIG_DM_DEBUG_SPACE_MAPS
 
 #define DM_MSG_PREFIX "space map checker"
 
+/*----------------------------------------------------------------*/
 
 struct count_array {
 	dm_block_t nr;
@@ -88,11 +90,21 @@ static int ca_create(struct count_array *ca, struct dm_space_map *sm)
 
 	ca->nr = nr_blocks;
 	ca->nr_free = nr_blocks;
-	ca->counts = kzalloc(sizeof(*ca->counts) * nr_blocks, GFP_KERNEL);
-	if (!ca->counts)
-		return -ENOMEM;
+
+	if (!nr_blocks)
+		ca->counts = NULL;
+	else {
+		ca->counts = vzalloc(sizeof(*ca->counts) * nr_blocks);
+		if (!ca->counts)
+			return -ENOMEM;
+	}
 
 	return 0;
+}
+
+static void ca_destroy(struct count_array *ca)
+{
+	vfree(ca->counts);
 }
 
 static int ca_load(struct count_array *ca, struct dm_space_map *sm)
@@ -125,12 +137,14 @@ static int ca_load(struct count_array *ca, struct dm_space_map *sm)
 static int ca_extend(struct count_array *ca, dm_block_t extra_blocks)
 {
 	dm_block_t nr_blocks = ca->nr + extra_blocks;
-	uint32_t *counts = kzalloc(sizeof(*counts) * nr_blocks, GFP_KERNEL);
+	uint32_t *counts = vzalloc(sizeof(*counts) * nr_blocks);
 	if (!counts)
 		return -ENOMEM;
 
-	memcpy(counts, ca->counts, sizeof(*counts) * ca->nr);
-	kfree(ca->counts);
+	if (ca->counts) {
+		memcpy(counts, ca->counts, sizeof(*counts) * ca->nr);
+		ca_destroy(ca);
+	}
 	ca->nr = nr_blocks;
 	ca->nr_free += extra_blocks;
 	ca->counts = counts;
@@ -150,11 +164,7 @@ static int ca_commit(struct count_array *old, struct count_array *new)
 	return 0;
 }
 
-static void ca_destroy(struct count_array *ca)
-{
-	kfree(ca->counts);
-}
-
+/*----------------------------------------------------------------*/
 
 struct sm_checker {
 	struct dm_space_map sm;
@@ -189,6 +199,9 @@ static int sm_checker_get_nr_free(struct dm_space_map *sm, dm_block_t *count)
 	struct sm_checker *smc = container_of(sm, struct sm_checker, sm);
 	int r = dm_sm_get_nr_free(smc->real_sm, count);
 	if (!r) {
+		/*
+		 * Slow, but we know it's correct.
+		 */
 		dm_block_t b, n = 0;
 		for (b = 0; b < smc->old_counts.nr; b++)
 			if (smc->old_counts.counts[b] == 0 &&
@@ -315,6 +328,7 @@ static int sm_checker_copy_root(struct dm_space_map *sm, void *copy_to_here_le, 
 	return dm_sm_copy_root(smc->real_sm, copy_to_here_le, len);
 }
 
+/*----------------------------------------------------------------*/
 
 static struct dm_space_map ops_ = {
 	.destroy = sm_checker_destroy,
@@ -337,25 +351,25 @@ struct dm_space_map *dm_sm_checker_create(struct dm_space_map *sm)
 	int r;
 	struct sm_checker *smc;
 
-	if (!sm)
-		return NULL;
+	if (IS_ERR_OR_NULL(sm))
+		return ERR_PTR(-EINVAL);
 
 	smc = kmalloc(sizeof(*smc), GFP_KERNEL);
 	if (!smc)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	memcpy(&smc->sm, &ops_, sizeof(smc->sm));
 	r = ca_create(&smc->old_counts, sm);
 	if (r) {
 		kfree(smc);
-		return NULL;
+		return ERR_PTR(r);
 	}
 
 	r = ca_create(&smc->counts, sm);
 	if (r) {
 		ca_destroy(&smc->old_counts);
 		kfree(smc);
-		return NULL;
+		return ERR_PTR(r);
 	}
 
 	smc->real_sm = sm;
@@ -365,7 +379,7 @@ struct dm_space_map *dm_sm_checker_create(struct dm_space_map *sm)
 		ca_destroy(&smc->counts);
 		ca_destroy(&smc->old_counts);
 		kfree(smc);
-		return NULL;
+		return ERR_PTR(r);
 	}
 
 	r = ca_commit(&smc->old_counts, &smc->counts);
@@ -373,7 +387,7 @@ struct dm_space_map *dm_sm_checker_create(struct dm_space_map *sm)
 		ca_destroy(&smc->counts);
 		ca_destroy(&smc->old_counts);
 		kfree(smc);
-		return NULL;
+		return ERR_PTR(r);
 	}
 
 	return &smc->sm;
@@ -385,25 +399,25 @@ struct dm_space_map *dm_sm_checker_create_fresh(struct dm_space_map *sm)
 	int r;
 	struct sm_checker *smc;
 
-	if (!sm)
-		return NULL;
+	if (IS_ERR_OR_NULL(sm))
+		return ERR_PTR(-EINVAL);
 
 	smc = kmalloc(sizeof(*smc), GFP_KERNEL);
 	if (!smc)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	memcpy(&smc->sm, &ops_, sizeof(smc->sm));
 	r = ca_create(&smc->old_counts, sm);
 	if (r) {
 		kfree(smc);
-		return NULL;
+		return ERR_PTR(r);
 	}
 
 	r = ca_create(&smc->counts, sm);
 	if (r) {
 		ca_destroy(&smc->old_counts);
 		kfree(smc);
-		return NULL;
+		return ERR_PTR(r);
 	}
 
 	smc->real_sm = sm;
@@ -411,6 +425,7 @@ struct dm_space_map *dm_sm_checker_create_fresh(struct dm_space_map *sm)
 }
 EXPORT_SYMBOL_GPL(dm_sm_checker_create_fresh);
 
+/*----------------------------------------------------------------*/
 
 #else
 
@@ -426,5 +441,6 @@ struct dm_space_map *dm_sm_checker_create_fresh(struct dm_space_map *sm)
 }
 EXPORT_SYMBOL_GPL(dm_sm_checker_create_fresh);
 
+/*----------------------------------------------------------------*/
 
 #endif
