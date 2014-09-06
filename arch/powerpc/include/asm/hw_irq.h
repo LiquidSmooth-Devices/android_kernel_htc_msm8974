@@ -13,6 +13,13 @@
 
 #ifdef CONFIG_PPC64
 
+/*
+ * PACA flags in paca->irq_happened.
+ *
+ * This bits are set when interrupts occur while soft-disabled
+ * and allow a proper replay. Additionally, PACA_IRQ_HARD_DIS
+ * is set whenever we manually hard disable.
+ */
 #define PACA_IRQ_HARD_DIS	0x01
 #define PACA_IRQ_DBELL		0x02
 #define PACA_IRQ_EE		0x04
@@ -78,8 +85,8 @@ static inline bool arch_irqs_disabled(void)
 }
 
 #ifdef CONFIG_PPC_BOOK3E
-#define __hard_irq_enable()	asm volatile("wrteei 1" : : : "memory");
-#define __hard_irq_disable()	asm volatile("wrteei 0" : : : "memory");
+#define __hard_irq_enable()	asm volatile("wrteei 1" : : : "memory")
+#define __hard_irq_disable()	asm volatile("wrteei 0" : : : "memory")
 #else
 #define __hard_irq_enable()	__mtmsrd(local_paca->kernel_msr | MSR_EE, 1)
 #define __hard_irq_disable()	__mtmsrd(local_paca->kernel_msr, 1)
@@ -94,6 +101,11 @@ static inline void hard_irq_disable(void)
 
 /* include/linux/interrupt.h needs hard_irq_disable to be a macro */
 #define hard_irq_disable	hard_irq_disable
+
+static inline bool lazy_irq_pending(void)
+{
+	return !!(get_paca()->irq_happened & ~PACA_IRQ_HARD_DIS);
+}
 
 /*
  * This is called by asynchronous interrupts to conditionally
@@ -112,7 +124,9 @@ static inline bool arch_irq_disabled_regs(struct pt_regs *regs)
 	return !regs->softe;
 }
 
-#else 
+extern bool prep_irq_for_idle(void);
+
+#else /* CONFIG_PPC64 */
 
 #define SET_MSR_EE(x)	mtmsr(x)
 
@@ -179,12 +193,16 @@ static inline bool arch_irq_disabled_regs(struct pt_regs *regs)
 
 static inline void may_hard_irq_enable(void) { }
 
-#endif 
+#endif /* CONFIG_PPC64 */
 
 #define ARCH_IRQ_INIT_FLAGS	IRQ_NOREQUEST
 
+/*
+ * interrupt-retrigger: should we handle this via lost interrupts and IPIs
+ * or should we not care like we do now ? --BenH.
+ */
 struct irq_chip;
 
-#endif  
-#endif	
-#endif	
+#endif  /* __ASSEMBLY__ */
+#endif	/* __KERNEL__ */
+#endif	/* _ASM_POWERPC_HW_IRQ_H */
