@@ -332,7 +332,7 @@ void phy_start_machine(struct phy_device *phydev,
 {
 	phydev->adjust_state = handler;
 
-	queue_delayed_work(system_power_efficient_wq, &phydev->state_queue, HZ);
+	schedule_delayed_work(&phydev->state_queue, HZ);
 }
 
 void phy_stop_machine(struct phy_device *phydev)
@@ -387,7 +387,7 @@ static irqreturn_t phy_interrupt(int irq, void *phy_dat)
 	disable_irq_nosync(irq);
 	atomic_inc(&phydev->irq_disable);
 
-	queue_work(system_power_efficient_wq, &phydev->phy_queue);
+	schedule_work(&phydev->phy_queue);
 
 	return IRQ_HANDLED;
 }
@@ -506,7 +506,7 @@ static void phy_change(struct work_struct *work)
 
 	
 	cancel_delayed_work_sync(&phydev->state_queue);
-	queue_delayed_work(system_power_efficient_wq, &phydev->state_queue, 0);
+	schedule_delayed_work(&phydev->state_queue, 0);
 
 	return;
 
@@ -751,6 +751,5 @@ void phy_state_machine(struct work_struct *work)
 	if (err < 0)
 		phy_error(phydev);
 
-	queue_delayed_work(system_power_efficient_wq, &phydev->state_queue,
-			PHY_STATE_TIME * HZ);
+	schedule_delayed_work(&phydev->state_queue, PHY_STATE_TIME * HZ);
 }
