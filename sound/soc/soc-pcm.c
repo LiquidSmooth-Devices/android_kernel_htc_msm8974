@@ -474,9 +474,8 @@ static int soc_pcm_close(struct snd_pcm_substream *substream)
 		} else {
 			
 			codec_dai->pop_wait = 1;
-			queue_delayed_work(system_power_efficient_wq,
-					   &rtd->delayed_work,
-					   msecs_to_jiffies(rtd->pmdown_time));
+			schedule_delayed_work(&rtd->delayed_work,
+				msecs_to_jiffies(rtd->pmdown_time));
 		}
 	} else {
 		
@@ -1848,8 +1847,11 @@ int soc_dpcm_fe_dai_prepare(struct snd_pcm_substream *substream)
 	}
 
 	ret = dpcm_be_dai_prepare(fe, substream->stream);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(fe->dev, "ASoC: prepare FE %s failed\n",
+						fe->dai_link->name);
 		goto out;
+	}
 
 	if (!(fe->dai_link->async_ops & ASYNC_DPCM_SND_SOC_PREPARE)) {
 		ret = dpcm_be_dai_prepare(fe, substream->stream);
@@ -1893,13 +1895,7 @@ int soc_dpcm_fe_dai_prepare(struct snd_pcm_substream *substream)
 		}
 	}
 
-	ret = soc_pcm_prepare(substream);
-	if (ret < 0) {
-		dev_err(fe->dev,"dpcm: prepare FE %s failed\n", fe->dai_link->name);
-		goto out;
-	}
-
-	
+	/* run the stream event for each BE */
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
 		dpcm_dapm_stream_event(fe, stream,
 				fe->cpu_dai->driver->playback.stream_name,
