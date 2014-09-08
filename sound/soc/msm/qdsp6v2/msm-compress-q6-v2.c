@@ -2003,7 +2003,7 @@ static int msm_compr_dec_params_put(struct snd_kcontrol *kcontrol,
 static int msm_compr_dec_params_get(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *ucontrol)
 {
-	/* dummy func<tion */
+	/* dummy function */
 	return 0;
 }
 
