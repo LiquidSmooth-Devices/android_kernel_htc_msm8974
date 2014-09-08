@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -77,15 +77,13 @@ static DEVICE_ATTR(__attr, 0644, show_##__attr, store_##__attr)
 
 static int l2pm_irq;
 static unsigned int bytes_per_beat;
+static unsigned int sample_ms = 50;
 static unsigned int tolerance_percent = 10;
 static unsigned int guard_band_mbps = 100;
 static unsigned int decay_rate = 90;
-static unsigned int io_percent = 16;
-static unsigned int bw_step = 190;
+static unsigned int io_percent = 15;
+static unsigned int bw_step = 200;
 
-#define MIN_MS	10U
-#define MAX_MS	500U
-static unsigned int sample_ms = 50;
 static u32 prev_r_start_val;
 static u32 prev_w_start_val;
 static unsigned long prev_ab;
@@ -95,7 +93,7 @@ static ktime_t prev_ts;
 #define WR_MON	1
 static void mon_init(void)
 {
-	/* Set up counters 0/1 to count write/read beats */
+	
 	set_l2_indirect_reg(L2PMRESR2, 0x8B0B0000);
 	set_l2_indirect_reg(L2PMnEVCNTCR(RD_MON), 0x0);
 	set_l2_indirect_reg(L2PMnEVCNTCR(WR_MON), 0x0);
@@ -111,7 +109,7 @@ static void global_mon_enable(bool en)
 {
 	u32 regval;
 
-	/* Global counter enable */
+	
 	regval = get_l2_indirect_reg(L2PMCR);
 	if (en)
 		regval |= BIT(0);
@@ -122,16 +120,16 @@ static void global_mon_enable(bool en)
 
 static void mon_enable(int n)
 {
-	/* Clear previous overflow state for event counter n */
+	
 	set_l2_indirect_reg(L2PMOVSR, BIT(n));
 
-	/* Enable event counter n */
+	
 	set_l2_indirect_reg(L2PMCNTENSET, BIT(n));
 }
 
 static void mon_disable(int n)
 {
-	/* Disable event counter n */
+	
 	set_l2_indirect_reg(L2PMCNTENCLR, BIT(n));
 }
 
@@ -143,7 +141,6 @@ static void mon_irq_enable(int n, bool en)
 		set_l2_indirect_reg(L2PMINTENCLR, BIT(n));
 }
 
-/* Returns start counter value to be used with mon_get_mbps() */
 static u32 mon_set_limit_mbyte(int n, unsigned int mbytes)
 {
 	u32 regval, beats;
@@ -171,7 +168,6 @@ long mon_get_count(int n, u32 start_val)
 		return count - start_val;
 }
 
-/* Returns MBps of read/writes for the sampling window. */
 unsigned int beats_to_mbps(long long beats, unsigned int us)
 {
 	beats *= USEC_PER_SEC;
@@ -196,13 +192,6 @@ unsigned long measure_bw_and_set_irq(void)
 	ktime_t ts;
 	unsigned int us;
 
-	/*
-	 * Since we are stopping the counters, we don't want this short work
-	 * to be interrupted by other tasks and cause the measurements to be
-	 * wrong. Not blocking interrupts to avoid affecting interrupt
-	 * latency and since they should be short anyway because they run in
-	 * atomic context.
-	 */
 	preempt_disable();
 
 	ts = ktime_get();
@@ -246,9 +235,8 @@ static void compute_bw(int mbps, unsigned long *freq, unsigned long *ab)
 		new_bw /= 100;
 	}
 
-	prev_ab = new_bw;
-	*ab = roundup(new_bw, bw_step);
-	*freq = (new_bw * 100) / io_percent;
+	*ab = roundup(mbps, bw_step);
+	*freq = roundup((mbps * 100) / io_percent, bw_step);
 }
 
 #define TOO_SOON_US	(1 * USEC_PER_MSEC)
@@ -265,16 +253,6 @@ static irqreturn_t mon_intr_handler(int irq, void *dev)
 
 	devfreq_monitor_stop(df);
 
-	/*
-	 * Don't recalc bandwidth if the interrupt comes right after a
-	 * previous bandwidth calculation.  This is done for two reasons:
-	 *
-	 * 1. Sampling the BW during a very short duration can result in a
-	 *    very inaccurate measurement due to very short bursts.
-	 * 2. This can only happen if the limit was hit very close to the end
-	 *    of the previous sample period. Which means the current BW
-	 *    estimate is not very off and doesn't need to be readjusted.
-	 */
 	ts = ktime_get();
 	us = ktime_to_us(ktime_sub(ts, prev_ts));
 	if (us > TOO_SOON_US) {
@@ -341,10 +319,12 @@ static int devfreq_cpubw_hwmon_get_freq(struct devfreq *df,
 
 	mbps = measure_bw_and_set_irq();
 	compute_bw(mbps, freq, df->data);
+	prev_ab = *(unsigned long *) df->data;
 
 	return 0;
 }
 
+gov_attr(sample_ms, 10U, 500U);
 gov_attr(tolerance_percent, 0U, 30U);
 gov_attr(guard_band_mbps, 0U, 2000U);
 gov_attr(decay_rate, 0U, 100U);
@@ -352,6 +332,7 @@ gov_attr(io_percent, 1U, 100U);
 gov_attr(bw_step, 50U, 1000U);
 
 static struct attribute *dev_attr[] = {
+	&dev_attr_sample_ms.attr,
 	&dev_attr_tolerance_percent.attr,
 	&dev_attr_guard_band_mbps.attr,
 	&dev_attr_decay_rate.attr,
@@ -378,13 +359,7 @@ static int devfreq_cpubw_hwmon_ev_handler(struct devfreq *df,
 		ret = sysfs_create_group(&df->dev.kobj, &dev_attr_group);
 		if (ret)
 			return ret;
-
-		sample_ms = df->profile->polling_ms;
-		sample_ms = max(MIN_MS, sample_ms);
-		sample_ms = min(MAX_MS, sample_ms);
-		df->profile->polling_ms = sample_ms;
 		devfreq_monitor_start(df);
-
 		pr_debug("Enabled CPU BW HW monitor governor\n");
 		break;
 
@@ -397,10 +372,7 @@ static int devfreq_cpubw_hwmon_ev_handler(struct devfreq *df,
 		break;
 
 	case DEVFREQ_GOV_INTERVAL:
-		sample_ms = *(unsigned int *)data;
-		sample_ms = max(MIN_MS, sample_ms);
-		sample_ms = min(MAX_MS, sample_ms);
-		devfreq_interval_update(df, &sample_ms);
+		devfreq_interval_update(df, (unsigned int *)data);
 		break;
 	}
 

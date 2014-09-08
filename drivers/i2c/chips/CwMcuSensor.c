@@ -97,7 +97,7 @@ module_param(DEBUG_FLAG_GEOMAGNETIC_ROTATION_VECTOR, int, 0600);
 static int DEBUG_FLAG_TIME = 10;
 module_param(DEBUG_FLAG_TIME, int, 0600);
 
-struct vib_trigger *vib_trigger = NULL;
+static struct vib_trigger *vib_trigger = NULL;
 
 static void polling_do_work(struct work_struct *w);
 static DECLARE_DELAYED_WORK(polling_work, polling_do_work);
@@ -117,6 +117,9 @@ struct wake_lock ges_wake_lock;
 struct wake_lock significant_wake_lock;
 
 static int power_key_pressed = 0;
+
+static int tap2wake = 0;
+
 struct CWMCU_data {
 	struct i2c_client *client;
 	atomic_t delay;
@@ -890,73 +893,6 @@ static int get_proximity(struct device *dev, struct device_attribute *attr, char
 	return snprintf(buf, PAGE_SIZE, "%x %x \n",data[0],data[1]);
 }
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_WAKE_GESTURES
-extern int cam_switch;
-
-static void sensor_enable(int sensors_id, int enabled)
-{
-	u8 i;
-	u8 data;
-	int retry = 0;
-
-	for (retry = 0; retry < ACTIVE_RETRY_TIMES; retry++) {
-		if (mcu_data->resume_done != 1)
-			I("%s: resume not completed, retry = %d\n", __func__, retry);
-		else
-			break;
-	}
-	if (retry >= ACTIVE_RETRY_TIMES) {
-		I("%s: resume not completed, retry = %d, retry fails!\n", __func__, retry);
-		return;
-	}
-
-	if (probe_i2c_fail) {
-		I("%s++: probe_i2c_fail retrun 0\n", __func__);
-		return;
-	}
-
-	if (enabled == 1) {
-		mcu_data->filter_first_zeros[sensors_id] = 1;
-	}
-
-	mcu_data->enabled_list &= ~(1<<sensors_id);
-	mcu_data->enabled_list |= ((uint32_t)enabled)<<sensors_id;
-
-	i = sensors_id /8;
-	data = (u8)(mcu_data->enabled_list>>(i*8));
-
-	D("%s: i= %d data = %d CWSTM32_ENABLE_REG= %d \n", __func__, i, data, CWSTM32_ENABLE_REG+i);
-
-	CWMCU_i2c_write(mcu_data, CWSTM32_ENABLE_REG+i, &data,1);
-
-	if ((mcu_data->input != NULL) && (sensors_id == Proximity) && (enabled == 1)) {
-		input_report_abs(mcu_data->input, ABS_DISTANCE, -1);
-	}
-}
-
-void proximity_set(int enabled)
-{
-	sensor_enable(Proximity, enabled);
-}
-
-void camera_volume_button_disable(void)
-{
-	sensor_enable(Gesture_Motion_HIDI, 0);
-	sensor_enable(Gesture_Motion, 0);
-}
-
-int check_pocket(void)
-{
-	u8 data[10]={0};
-	int ret;
-
-	CWMCU_i2c_read(mcu_data, CWSTM32_READ_Proximity, data, 2);
-	ret = data[0];
-
-	return ret;
-}
-#endif
-
 static int get_proximity_polling(struct device *dev, struct device_attribute *attr, char *buf){
 	u8 data[2]={0};
 	u8 data_polling_enable = 0;
@@ -1003,9 +939,6 @@ static int CWMCU_i2c_write(struct CWMCU_data *sensor,
 	int dummy;
 	int retry = 0;
 	int i;
-
-	if (sensor == NULL)
-		return -1;
 
 	mc_power_controller(1);
 	#if USE_WAKE_MCU
@@ -1455,6 +1388,26 @@ static int boot_mode_show(struct device *dev, struct device_attribute *attr, cha
 		return snprintf(buf, PAGE_SIZE, "%d\n", -1);
 }
 
+static int tap2wake_set(struct device *dev, struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	int val;
+	sscanf(buf, "%du", &val);
+
+	if (val > 1 || val < 0) {
+		pr_err("[CWMCU] %s: tap2wake value %d is invalid!\n", __func__, val);
+	} else {
+		tap2wake = val;
+	}
+
+	return count;
+}
+
+static int tap2wake_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", tap2wake);
+}
+
 #if 0
 static DEVICE_ATTR(enable, 0666, active_show,
 		   active_set);
@@ -1486,21 +1439,12 @@ static struct attribute_group sysfs_attribute_group = {
 	.attrs = sysfs_attributes
 };
 #endif
-
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_WAKE_GESTURES
-extern void sweep2wake_setdev(struct input_dev * input_device);
-#endif
-
 static void __devinit CWMCU_init_input_device(struct CWMCU_data *sensor,struct input_dev *idev)	
 {
 	idev->name = CWMCU_I2C_NAME;
 	
 	idev->id.bustype = BUS_I2C;
 	idev->dev.parent = &sensor->client->dev;
-
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_WAKE_GESTURES
-	sweep2wake_setdev(idev);
-#endif
 
 	idev->evbit[0] = BIT_MASK(EV_ABS);
 	set_bit(EV_ABS, idev->evbit);
@@ -2764,10 +2708,13 @@ static void cwmcu_irq_work_func(struct work_struct *work)
 		D("[CWMCU]CW_MCU_INT_BIT_HTC_GESTURE_MOTION_HIDI: i2c bus read %d bytes\n", ret);
 		data_event = (s32)((data[0] & 0x1F) | (((data[1] | (data[2] << 8)) & 0x3FF) << 5) | (data[3] << 15) | (data[4] << 23));
 		if (vib_trigger) {
+#if 0
 			if (data[0] == 14) {
 				vib_trigger_event(vib_trigger, VIB_TIME);
 				D("Gesture motion HIDI detected, vibrate for %d ms!\n", VIB_TIME);
 			} else if(data[0] == 6 || data[0] == 15 || data[0] == 18 || data[0] == 19 || data[0] == 24 || data[0] == 25 || data[0] == 26 || data[0] == 27) {
+#endif
+			if (data[0] == 15 && tap2wake == 1) {
 				vib_trigger_event(vib_trigger, VIB_TIME);
 				sensor->sensors_time[Gesture_Motion_HIDI] = 0;
 				input_report_rel(sensor->input, HTC_Gesture_Motion_HIDI, data_event);
@@ -2776,6 +2723,7 @@ static void cwmcu_irq_work_func(struct work_struct *work)
 				D("[CWMCU][vib_trigger] Gesture_Motion_HIDI: df0: %d, d0: %d, d1: %d\n", data_buff[0], data[0], data[1]);
 				D("[CWMCU][vib_trigger] Gesture_Motion_HIDI: data_buff: %d, data_event: %d\n", data_buff[1], data_event);
 				D("[CWMCU][vib_trigger] Gesture_Motion_HIDI input sync\n");
+#if 0
 			} else {
                                 sensor->sensors_time[Gesture_Motion_HIDI] = 0;
                                 input_report_rel(sensor->input, HTC_Gesture_Motion_HIDI, data_event);
@@ -2784,6 +2732,7 @@ static void cwmcu_irq_work_func(struct work_struct *work)
                                 D("[CWMCU][disable vib_trigger] Gesture_Motion_HIDI: df0: %d, d0: %d, d1: %d\n", data_buff[0], data[0], data[1]);
                                 D("[CWMCU][disable vib_trigger] Gesture_Motion_HIDI: data_buff: %d, data_event: %d\n", data_buff[1], data_event);
                                 D("[CWMCU][disable vib_trigger] Gesture_Motion_HIDI input sync\n");
+#endif
 			}
 		} else {
 			sensor->sensors_time[Gesture_Motion_HIDI] = 0;
@@ -3141,6 +3090,7 @@ static struct device_attribute attributes[] = {
 #ifdef HTC_ENABLE_SENSORHUB_UART_DEBUG
 	__ATTR(uart_debug, 0666, NULL, uart_debug_switch),
 #endif
+	__ATTR(tap2wake, 0666, tap2wake_show, tap2wake_set),
 };
 
 

@@ -13,7 +13,6 @@
 #ifndef _ARCH_ARM_MACH_KGSL_H
 #define _ARCH_ARM_MACH_KGSL_H
 
-/* Clock flags to show which clocks should be controled by a given platform */
 #define KGSL_CLK_SRC	0x00000001
 #define KGSL_CLK_CORE	0x00000002
 #define KGSL_CLK_IFACE	0x00000004
@@ -41,9 +40,6 @@
 	 (((_mi) & 0xFF) << 8) | \
 	 ((_pa) & 0xFF))
 
-//gboost
-extern int graphics_boost;
-
 enum kgsl_iommu_context_id {
 	KGSL_IOMMU_CONTEXT_USER = 0,
 	KGSL_IOMMU_CONTEXT_PRIV = 1,
@@ -54,15 +50,6 @@ struct kgsl_iommu_ctx {
 	enum kgsl_iommu_context_id ctx_id;
 };
 
-/*
- * struct kgsl_device_iommu_data - Struct holding iommu context data obtained
- * from dtsi file
- * @iommu_ctxs:		Pointer to array of struct hoding context name and id
- * @iommu_ctx_count:	Number of contexts defined in the dtsi file
- * @iommu_halt_enable:	Indicated if smmu halt h/w feature is supported
- * @physstart:		Start of iommu registers physical address
- * @physend:		End of iommu registers physical address
- */
 struct kgsl_device_iommu_data {
 	const struct kgsl_iommu_ctx *iommu_ctxs;
 	int iommu_ctx_count;
@@ -94,7 +81,6 @@ struct kgsl_device_platform_data {
 	struct coresight_device *csdev;
 	struct coresight_platform_data *coresight_pdata;
 	unsigned int chipid;
-	unsigned int pm_qos_latency;
 };
 
 #endif
