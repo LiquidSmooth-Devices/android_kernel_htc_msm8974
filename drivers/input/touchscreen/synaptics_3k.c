@@ -253,6 +253,8 @@ static irqreturn_t synaptics_irq_thread(int irq, void *ptr);
 
 extern unsigned int get_tamper_sf(void);
 
+static struct input_dev *smart_cover;
+
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_WAKE_GESTURES
 
 #define SWEEP_RIGHT 0x01
