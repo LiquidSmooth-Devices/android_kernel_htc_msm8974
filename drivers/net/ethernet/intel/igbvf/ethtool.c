@@ -25,6 +25,7 @@
 
 *******************************************************************************/
 
+/* ethtool support for igbvf */
 
 #include <linux/netdevice.h>
 #include <linux/ethtool.h>
@@ -234,7 +235,7 @@ static int igbvf_set_ringparam(struct net_device *netdev,
 
 	if ((new_tx_count == adapter->tx_ring->count) &&
 	    (new_rx_count == adapter->rx_ring->count)) {
-		
+		/* nothing to do */
 		return 0;
 	}
 
@@ -255,6 +256,11 @@ static int igbvf_set_ringparam(struct net_device *netdev,
 
 	igbvf_down(adapter);
 
+	/*
+	 * We can't just free everything and then setup again,
+	 * because the ISRs in MSI-X mode get passed pointers
+	 * to the tx and rx ring structs.
+	 */
 	if (new_tx_count != adapter->tx_ring->count) {
 		memcpy(temp_ring, adapter->tx_ring, sizeof(struct igbvf_ring));
 
@@ -308,6 +314,10 @@ static void igbvf_diag_test(struct net_device *netdev,
 
 	set_bit(__IGBVF_TESTING, &adapter->state);
 
+	/*
+	 * Link test performed before hardware reset so autoneg doesn't
+	 * interfere with test result
+	 */
 	if (igbvf_link_test(adapter, &data[0]))
 		eth_test->flags |= ETH_TEST_FL_FAILED;
 
@@ -347,21 +357,28 @@ static int igbvf_set_coalesce(struct net_device *netdev,
 	struct igbvf_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
-	if ((ec->rx_coalesce_usecs > IGBVF_MAX_ITR_USECS) ||
-	    ((ec->rx_coalesce_usecs > 3) &&
-	     (ec->rx_coalesce_usecs < IGBVF_MIN_ITR_USECS)) ||
-	    (ec->rx_coalesce_usecs == 2))
-		return -EINVAL;
-
-	
-	if (ec->rx_coalesce_usecs && ec->rx_coalesce_usecs <= 3) {
-		adapter->current_itr = IGBVF_START_ITR;
-		adapter->requested_itr = ec->rx_coalesce_usecs;
-	} else {
+	if ((ec->rx_coalesce_usecs >= IGBVF_MIN_ITR_USECS) &&
+	     (ec->rx_coalesce_usecs <= IGBVF_MAX_ITR_USECS)) {
 		adapter->current_itr = ec->rx_coalesce_usecs << 2;
 		adapter->requested_itr = 1000000000 /
 					(adapter->current_itr * 256);
-	}
+	} else if ((ec->rx_coalesce_usecs == 3) ||
+		   (ec->rx_coalesce_usecs == 2)) {
+		adapter->current_itr = IGBVF_START_ITR;
+		adapter->requested_itr = ec->rx_coalesce_usecs;
+	} else if (ec->rx_coalesce_usecs == 0) {
+		/*
+		 * The user's desire is to turn off interrupt throttling
+		 * altogether, but due to HW limitations, we can't do that.
+		 * Instead we set a very small value in EITR, which would
+		 * allow ~967k interrupts per second, but allow the adapter's
+		 * internal clocking to still function properly.
+		 */
+		adapter->current_itr = 4;
+		adapter->requested_itr = 1000000000 /
+					(adapter->current_itr * 256);
+	} else
+		return -EINVAL;
 
 	writel(adapter->current_itr,
 	       hw->hw_addr + adapter->rx_ring->itr_register);
