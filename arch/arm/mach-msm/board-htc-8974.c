@@ -86,6 +86,13 @@
 #include <linux/android_ediagpmem.h>
 #endif
 
+#if defined(CONFIG_LCD_KCAL)
+#include <linux/module.h>
+#include "../../../drivers/video/msm/mdss/mdss_fb.h"
+#include <mach/htc_lcd_kcal.h>
+extern int update_preset_lcdc_lut(void);
+#endif
+
 #if defined(CONFIG_FB_MSM_MDSS_HDMI_MHL_SII8240_SII8558) && defined(CONFIG_HTC_MHL_DETECTION)
 #include "../../../drivers/video/msm/mdss/sii8240_8558/mhl_platform.h"
 #endif
@@ -606,6 +613,7 @@ static void __init htc_8974_early_memory(void)
 	reserve_info = &htc_8974_reserve_info;
 	of_scan_flat_dt(dt_scan_for_memory_hole, htc_8974_reserve_table);
 }
+
 
 #if defined(CONFIG_HTC_BATT_8960)
 #ifdef CONFIG_HTC_PNPMGR
