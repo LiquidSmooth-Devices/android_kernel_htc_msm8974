@@ -607,6 +607,7 @@ static void __init htc_8974_early_memory(void)
 	of_scan_flat_dt(dt_scan_for_memory_hole, htc_8974_reserve_table);
 }
 
+
 #if defined(CONFIG_HTC_BATT_8960)
 #ifdef CONFIG_HTC_PNPMGR
 extern int pnpmgr_battery_charging_enabled(int charging_enabled);
