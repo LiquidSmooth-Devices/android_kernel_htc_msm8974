@@ -29,6 +29,14 @@ extern int g_kcal_b;
 extern struct kcal_data kcal_value;
 #endif
 
+#if defined(CONFIG_LCD_KCAL)
+#include <mach/htc_lcd_kcal.h>
+extern int g_kcal_r;
+extern int g_kcal_g;
+extern int g_kcal_b;
+extern struct kcal_data kcal_value;
+#endif
+
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 	[MDSS_MDP_CSC_RGB2RGB] = {
 		0,
