@@ -353,7 +353,7 @@ MODFLAGS        = -DMODULE \
 		  -fpredictive-commoning \
                   -O3
 
-CFLAGS_MODULE   = $(MODFLAGS)
+CFLAGS_MODULE   = $(MODFLAGS) -fno-pic
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  = -T $(srctree)/scripts/module-common.lds
 CFLAGS_KERNEL   = -mfpu=neon-vfpv4 \
