@@ -8,7 +8,7 @@ obj-y += clock.o clock-voter.o clock-dummy.o clock-generic.o
 obj-y += modem_notifier.o
 obj-$(CONFIG_USE_OF) += board-dt.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o clock-debug.o
-obj-$(CONFIG_KEXEC) += msm_kexec.o
+#obj-$(CONFIG_KEXEC) += msm_kexec.o
 
 obj-$(CONFIG_MSM_PROC_COMM) += proc_comm.o
 ifndef CONFIG_ARCH_MSM8X60
