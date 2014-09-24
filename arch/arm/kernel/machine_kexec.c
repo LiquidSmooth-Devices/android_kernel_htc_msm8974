@@ -150,6 +150,7 @@ void machine_kexec(struct kimage *image)
 	    page_to_pfn(image->control_code_page) << PAGE_SHIFT;
 	reboot_code_buffer = page_address(image->control_code_page);
 
+	/* Prepare parameters for reboot_code_buffer*/
 	mem_text_write_kernel_word(&kexec_start_address, image->start);
 	mem_text_write_kernel_word(&kexec_indirection_page, page_list);
 	mem_text_write_kernel_word(&kexec_mach_type, machine_arch_type);
@@ -158,7 +159,6 @@ void machine_kexec(struct kimage *image)
 #ifdef CONFIG_KEXEC_HARDBOOT
 	mem_text_write_kernel_word(&kexec_hardboot, image->hardboot);
 #endif
-
 	
 	memcpy(reboot_code_buffer,
 	       relocate_new_kernel, relocate_new_kernel_size);
