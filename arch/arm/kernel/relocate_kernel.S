@@ -3,10 +3,15 @@
  */
 
 #include <asm/kexec.h>
-
 #ifdef CONFIG_KEXEC_HARDBOOT
 #include <asm/memory.h>
-#include <mach/msm_iomap.h>
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+  #include <mach/iomap.h>
+#elif defined(CONFIG_ARCH_APQ8064)
+  #include <mach/msm_iomap.h>
+#elif defined(CONFIG_ARCH_MSM8974)
+  #include <mach/msm_iomap-8974.h>
+#endif
 #endif
 
 	.globl relocate_new_kernel
@@ -93,7 +98,19 @@ hardboot:
 	ldr	r1, =KEXEC_HB_PAGE_MAGIC
 	str	r1, [r0]
 
-#if defined(CONFIG_ARCH_MSM8974)
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	ldr     r0, =TEGRA_PMC_BASE
+	ldr	r1, [r0]
+	orr	r1, r1, #0x10
+	str	r1, [r0]
+loop:	b	loop
+#elif defined(CONFIG_ARCH_APQ8064)
+	/* Restart using the PMIC chip, see mach-msm/restart.c */
+	ldr	r0, =APQ8064_TLMM_PHYS
+	mov	r1, #0
+	str	r1, [r0, #0x820]  @ PSHOLD_CTL_SU
+loop:	b	loop
+#elif defined(CONFIG_ARCH_MSM8974)
 	/* Restart using the PMIC chip, see mach-msm/restart.c */
 	ldr	r0, =MSM8974_MPM2_PSHOLD_PHYS
 	mov	r1, #0
@@ -105,6 +122,7 @@ loop:	b	loop
 
 	.ltorg
 #endif
+
 	.align
 
 	.globl kexec_start_address

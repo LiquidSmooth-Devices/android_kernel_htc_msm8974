@@ -88,7 +88,6 @@
 
 #ifdef CONFIG_KEXEC_HARDBOOT
 #include <linux/memblock.h>
-#include <asm/setup.h>
 #endif
 
 #if defined(CONFIG_FB_MSM_MDSS_HDMI_MHL_SII8240_SII8558) && defined(CONFIG_HTC_MHL_DETECTION)
@@ -198,6 +197,7 @@ void __init add_lcd_kcal_devices(void)
 #endif
 
 #define HTC_8974_PERSISTENT_RAM_PHYS 0x05B00000
+
 #ifdef CONFIG_HTC_BUILD_EDIAG
 #define HTC_8974_PERSISTENT_RAM_SIZE (SZ_1M - SZ_128K - SZ_64K)
 #else
@@ -218,6 +218,11 @@ static struct persistent_ram htc_8974_persistent_ram = {
 	.num_descs = ARRAY_SIZE(htc_8974_persistent_ram_descs),
 	.descs     = htc_8974_persistent_ram_descs,
 };
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+#define HTC_8974_HARDBOOT_PHYS 0x05C00000
+#define HTC_8974_HARDBOOT_SIZE SZ_1M
+#endif
 
 #ifdef CONFIG_HTC_BUILD_EDIAG
 #define MSM_HTC_PMEM_EDIAG_BASE 0x05BD0000
@@ -708,25 +713,14 @@ static void __init htc_8974_map_io(void)
 void __init htc_8974_init_early(void)
 {
 #ifdef CONFIG_KEXEC_HARDBOOT
-	// Reserve space for hardboot page - just after ram_console,
-	// at the start of second memory bank
-	int ret;
-	phys_addr_t start;
-	struct membank* bank;
-
-	if (meminfo.nr_banks < 2) {
-		pr_err("%s: not enough membank\n", __func__);
-		return;
-	}
-
-	bank = &meminfo.bank[1];
-	start = bank->start + SZ_1M + HTC_8974_PERSISTENT_RAM_SIZE;
-	ret = memblock_remove(start, SZ_1M);
+	// Reserve space for hardboot page
+	int ret = memblock_remove(HTC_8974_HARDBOOT_PHYS, HTC_8974_HARDBOOT_SIZE);
 	if(!ret)
-		pr_info("Hardboot page reserved at 0x%X\n", start);
+		pr_info("Hardboot page reserved at 0x%X\n", HTC_8974_HARDBOOT_PHYS);
 	else
-		pr_err("Failed to reserve space for hardboot page at 0x%X!\n", start);
-#endif	
+		pr_err("Failed to reserve space for hardboot page at 0x%X!\n", HTC_8974_HARDBOOT_PHYS);
+#endif
+
 	persistent_ram_early_init(&htc_8974_persistent_ram);
 
 #ifdef CONFIG_HTC_DEBUG_FOOTPRINT

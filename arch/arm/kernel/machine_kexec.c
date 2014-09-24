@@ -11,9 +11,9 @@
 #include <asm/cacheflush.h>
 #include <asm/mach-types.h>
 #include <asm/system_misc.h>
+#include <asm/mmu_writeable.h>
 #include <linux/memblock.h>
 #include <linux/of_fdt.h>
-#include <asm/mmu_writeable.h>
 
 extern const unsigned char relocate_new_kernel[];
 extern const unsigned int relocate_new_kernel_size;
@@ -22,7 +22,6 @@ extern unsigned long kexec_start_address;
 extern unsigned long kexec_indirection_page;
 extern unsigned long kexec_mach_type;
 extern unsigned long kexec_boot_atags;
-
 #ifdef CONFIG_KEXEC_HARDBOOT
 extern unsigned long kexec_hardboot;
 extern unsigned long kexec_boot_atags_len;
@@ -150,6 +149,7 @@ void machine_kexec(struct kimage *image)
 	    page_to_pfn(image->control_code_page) << PAGE_SHIFT;
 	reboot_code_buffer = page_address(image->control_code_page);
 
+	/* Prepare parameters for reboot_code_buffer*/
 	mem_text_write_kernel_word(&kexec_start_address, image->start);
 	mem_text_write_kernel_word(&kexec_indirection_page, page_list);
 	mem_text_write_kernel_word(&kexec_mach_type, machine_arch_type);
@@ -159,7 +159,6 @@ void machine_kexec(struct kimage *image)
 	mem_text_write_kernel_word(&kexec_hardboot, image->hardboot);
 #endif
 
-	
 	memcpy(reboot_code_buffer,
 	       relocate_new_kernel, relocate_new_kernel_size);
 

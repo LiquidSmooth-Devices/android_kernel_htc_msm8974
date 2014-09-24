@@ -9,13 +9,14 @@
  * published by the Free Software Foundation.
  */
 #include <linux/linkage.h>
+#include <asm/memory.h>
 
-	.arch	armv7-a
 #ifdef CONFIG_KEXEC_HARDBOOT
   #include <asm/kexec.h>
   #include <asm/memory.h>
 #endif
 
+	.arch	armv7-a
 /*
  * Debugging stuff
  *
@@ -528,6 +529,8 @@ not_relocated:	mov	r0, #0
  ARM(		mov	pc, r4	)		@ call kernel
  THUMB(		bx	r4	)		@ entry point is always ARM
 
+ 		.ltorg
+
 		.align	2
 		.type	LC0, #object
 LC0:		.word	LC0			@ r1
@@ -645,9 +648,14 @@ __setup_mmu:	sub	r3, r4, #16384		@ Page directory size
  * bits for the RAM area only.
  */
 		mov	r0, r3
+#if defined(PLAT_PHYS_OFFSET) && defined(END_MEM)
+		mov  r9, #PLAT_PHYS_OFFSET  @ start of RAM
+		ldr  r10, =END_MEM    @ end of RAM
+#else
 		mov	r9, r0, lsr #18
 		mov	r9, r9, lsl #18		@ start of RAM
 		add	r10, r9, #0x10000000	@ a reasonable RAM size
+#endif
 		mov	r1, #0x12		@ XN|U + section mapping
 		orr	r1, r1, #3 << 10	@ AP=11
 		add	r2, r3, #16384
