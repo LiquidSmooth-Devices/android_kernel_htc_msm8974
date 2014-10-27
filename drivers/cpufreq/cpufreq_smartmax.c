@@ -141,18 +141,18 @@ extern int tegra_input_boost (struct cpufreq_policy *policy,
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_SMARTMAX_MSM8974
-#define DEFAULT_SUSPEND_IDEAL_FREQ 384000
+#define DEFAULT_SUSPEND_IDEAL_FREQ 422400
 #define DEFAULT_AWAKE_IDEAL_FREQ 1267200
-#define DEFAULT_RAMP_UP_STEP 300000
+#define DEFAULT_RAMP_UP_STEP 200000
 #define DEFAULT_RAMP_DOWN_STEP 200000
-#define DEFAULT_MAX_CPU_LOAD 65
-#define DEFAULT_MIN_CPU_LOAD 35
+#define DEFAULT_MAX_CPU_LOAD 80
+#define DEFAULT_MIN_CPU_LOAD 50
 #define DEFAULT_UP_RATE 30000
 #define DEFAULT_DOWN_RATE 60000
 #define DEFAULT_SAMPLING_RATE 30000
-#define DEFAULT_INPUT_BOOST_DURATION 1200000
-#define DEFAULT_TOUCH_POKE_FREQ 1728000
-#define DEFAULT_BOOST_FREQ 1728000
+#define DEFAULT_INPUT_BOOST_DURATION 900000
+#define DEFAULT_TOUCH_POKE_FREQ 1497600
+#define DEFAULT_BOOST_FREQ 1497600
 #define DEFAULT_IO_IS_BUSY 0
 #define DEFAULT_IGNORE_NICE 1
 #endif
@@ -228,7 +228,7 @@ static unsigned int ignore_nice;
 
 static unsigned int dbs_enable; /* number of CPUs using this policy */
 
-static void do_dbs_timer(struct work_struct *work);
+static void smartmax_do_dbs_timer(struct work_struct *work);
 
 struct smartmax_info_s {
 	struct cpufreq_policy *cur_policy;
@@ -417,14 +417,7 @@ static inline unsigned int get_timer_delay(void) {
 	return delay;
 }
 
-static inline void dbs_timer_init(struct smartmax_info_s *this_smartmax) {
-	int delay = get_timer_delay();
-
-	INIT_DELAYED_WORK_DEFERRABLE(&this_smartmax->work, do_dbs_timer);
-	queue_delayed_work_on(this_smartmax->cpu, smartmax_wq, &this_smartmax->work, delay);
-}
-
-static inline void dbs_timer_exit(struct smartmax_info_s *this_smartmax) {
+static inline void smartmax_dbs_timer_exit(struct smartmax_info_s *this_smartmax) {
 	cancel_delayed_work_sync(&this_smartmax->work);
 }
 
@@ -473,6 +466,23 @@ inline static void target_freq(struct cpufreq_policy *policy,
 
 	// remember last time we changed frequency
 	this_smartmax->freq_change_time = ktime_to_us(ktime_get());
+}
+
+static inline void smartmax_dbs_timer_init(struct smartmax_info_s *this_smartmax) {
+	int delay = get_timer_delay();
+
+	if (this_smartmax->cur_policy->cur < boost_freq) {
+		dprintk(SMARTMAX_DEBUG_BOOST, "%s: cpu %d freq %d boosting to %d\n", __func__,
+				this_smartmax->cur_policy->cpu, this_smartmax->cur_policy->cur, boost_freq);
+
+		// if a new cpu went up chances are high that the load is high so it makes
+		// sense to boost that new cpu right away before the first timer event
+		target_freq(this_smartmax->cur_policy, this_smartmax, boost_freq,
+				this_smartmax->cur_policy->cur, CPUFREQ_RELATION_H);
+	}
+
+	INIT_DELAYED_WORK_DEFERRABLE(&this_smartmax->work, smartmax_do_dbs_timer);
+	queue_delayed_work_on(this_smartmax->cpu, smartmax_wq, &this_smartmax->work, delay);
 }
 
 /* We use the same work function to sale up and down */
@@ -675,7 +685,7 @@ static void cpufreq_smartmax_timer(struct smartmax_info_s *this_smartmax) {
 	cpufreq_smartmax_freq_change(this_smartmax);
 }
 
-static void do_dbs_timer(struct work_struct *work) {
+static void smartmax_do_dbs_timer(struct work_struct *work) {
 	struct smartmax_info_s *this_smartmax =
 			container_of(work, struct smartmax_info_s, work.work);
 	unsigned int cpu = this_smartmax->cpu;
@@ -1202,6 +1212,9 @@ static int cpufreq_smartmax_boost_task(void *data) {
 static void smartmax_input_event(struct input_handle *handle, unsigned int type,
 		unsigned int code, int value) {
 	if (!is_suspended && touch_poke && type == EV_SYN && code == SYN_REPORT) {
+		if (!input_boost_duration || !touch_poke_freq)
+			return;
+
 		// no need to bother if currently a boost is running anyway
 		if (boost_task_alive && boost_running)
 			return;
@@ -1384,7 +1397,7 @@ static int cpufreq_governor_smartmax(struct cpufreq_policy *new_policy,
 		}
 
 		mutex_unlock(&dbs_mutex);
-		dbs_timer_init(this_smartmax);
+		smartmax_dbs_timer_init(this_smartmax);
 
 		break;
 	case CPUFREQ_GOV_LIMITS:
@@ -1405,7 +1418,7 @@ static int cpufreq_governor_smartmax(struct cpufreq_policy *new_policy,
 		break;
 
 	case CPUFREQ_GOV_STOP:
-		dbs_timer_exit(this_smartmax);
+		smartmax_dbs_timer_exit(this_smartmax);
 
 		mutex_lock(&dbs_mutex);
 		this_smartmax->cur_policy = NULL;
