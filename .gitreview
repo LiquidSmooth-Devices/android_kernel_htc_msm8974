@@ -2,4 +2,4 @@
 host=gerrit.liquidsmooth.net
 port=29418
 project=LiquidSmooth-Devices/android_kernel_htc_msm8974.git
-defaultbranch=kitkat
+defaultbranch=lollipop
